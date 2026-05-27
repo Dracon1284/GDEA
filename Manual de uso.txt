@@ -1,0 +1,451 @@
+╔════════════════════════════════════════════════════╗
+║         GDEA — PROCESADOR DE EXPEDIENTES ELECTRÓNICOS GDE              ║
+║                       MANUAL DE USO                                    ║
+╚════════════════════════════════════════════════════╝
+
+Versión: 1.0
+Sistema compatible: Windows 10 u 11
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÍNDICE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. ¿Qué hace este programa?
+  2. Requisitos del sistema
+  3. Instalación (primera vez)
+  4. Cómo ejecutar el programa
+  5. Menú principal
+  6. Opción 1 — Iniciar procesamiento
+     6.1  Paso 1: Ingresar el archivo ZIP
+     6.2  Paso 2: Ingresar la carpeta de salida
+     6.3  Paso 3: Confirmar e iniciar
+     6.4  Progreso del procesamiento
+  7. Opción 2 — Opciones (activar/desactivar reportes)
+  8. Reportes generados
+     8.1  caratula.txt
+     8.2  indice.csv
+     8.3  firmantes.csv
+     8.4  destinatarios.csv
+     8.5  listado_embebidos.csv
+     8.6  embebidos/
+     8.7  consolidado.pdf
+     8.8  consolidado_txt.txt
+  9. Validaciones y mensajes de error
+ 10. Portabilidad — mover el programa a otro equipo
+ 11. Preguntas frecuentes
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ¿QUÉ HACE ESTE PROGRAMA?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GDEA procesa expedientes electrónicos del sistema GDE (Gestión
+Documental Electrónica Argentina). A partir de un archivo ZIP
+descargado del sistema GDE, genera automáticamente un conjunto de
+reportes analíticos.
+
+El programa funciona completamente de forma LOCAL: no requiere
+conexión a internet ni acceso a servidores externos.
+
+Tipos de documentos que reconoce:
+  IF  Informe
+  ME  Memorando
+  NO  Nota
+  PV  Providencia
+  DI  Disposición
+  SC  Solicitud de Costos
+  OT  otros
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. REQUISITOS DEL SISTEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - Windows 10 u 11
+  - El archivo ZIP del expediente debe comenzar con "EX-"
+
+No se requiere instalar ningún software adicional. GDEA es un
+ejecutable portable que incluye todo lo necesario.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. INSTALACIÓN (PRIMERA VEZ)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Solo es necesario realizar este paso una única vez por equipo.
+
+  1. Copiar la carpeta GDEA al disco de almacenamiento donde se busque
+     usar.
+  2. Hacer doble clic en:  GDEA.exe
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. CÓMO EJECUTAR EL PROGRAMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada vez que desee usar el programa:
+
+  Hacer doble clic en:  GDEA.exe
+
+Se abre una ventana con el menú principal de GDEA.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. MENÚ PRINCIPAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Al iniciar el programa aparece el menú principal con tres opciones:
+
+  ┌──────────────────────────────────┐
+  │  [1]  Iniciar procesamiento                   │
+  │  [2]  Opciones (activar/desactivar reportes)  │
+  │  [3]  Acerca de                               │
+  │  [0]  Salir                                   │
+  └──────────────────────────────────┘
+
+También muestra el listado de reportes disponibles con su estado
+actual (Activo / Inactivo).
+
+Para seleccionar una opción, escriba el número y presione Enter.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. OPCIÓN 1 — INICIAR PROCESAMIENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Esta opción realiza el procesamiento completo de un expediente.
+Se realiza en tres pasos antes de iniciar.
+
+
+  ── 6.1  PASO 1: INGRESAR EL ARCHIVO ZIP ───────────────────────
+
+  El programa solicita la ruta al archivo ZIP del expediente.
+
+  Puede ingresar de dos formas:
+
+  a) RUTA COMPLETA AL ARCHIVO ZIP:
+     Escriba o pegue la ruta completa incluyendo el nombre del
+     archivo.
+     Ejemplo:
+       C:\Expedientes\EX- .. .zip
+
+     TIP: Puede arrastrar el archivo ZIP sobre la ventana de
+     terminal para pegar la ruta automáticamente. Si la ruta
+     aparece entre comillas, el programa las elimina solo.
+
+  b) RUTA A LA CARPETA QUE CONTIENE EL ZIP:
+     Si escribe solo la ruta de una carpeta, el programa lista
+     automáticamente todos los archivos ZIP que comiencen con
+     "EX-" en esa carpeta.
+     Ejemplo:
+       C:\Expedientes
+
+     Luego aparece un listado numerado para seleccionar el archivo:
+       [1]  EX-... 1.zip
+       [2]  EX-... 2.zip
+       [0]  Volver
+
+  Solo se procesan los archivos que empiezan con EX-
+
+  Para volver al menú principal escriba  0  y presione Enter.
+
+
+  ── 6.2  PASO 2: INGRESAR LA CARPETA DE SALIDA ────────────────────
+
+  El programa solicita la carpeta donde se guardarán los reportes.
+
+  - Si la carpeta no existe, se crea automáticamente.
+  - Si ingresa una carpeta que ya fue procesada anteriormente,
+    aparece una advertencia indicando la fecha de ese proceso.
+    Puede elegir sobreescribir (s) o ingresar otra carpeta (n).
+
+  Ejemplo de carpeta de salida:
+    C:\Reportes\Expediente_123456
+
+  Para volver al paso anterior presione Enter sin escribir nada.
+
+
+  ── 6.3  PASO 3: CONFIRMAR E INICIAR ───────────────────────────
+
+  Antes de iniciar se muestra un resumen con:
+    - Nombre del archivo ZIP
+    - Carpeta de salida
+    - Reportes que se van a generar
+
+  Se pregunta: ¿Desea continuar? (s/n)
+    s  →  inicia el procesamiento
+    n  →  cancela y vuelve al menú principal
+
+
+  ── 6.4  PROGRESO DEL PROCESAMIENTO ────────────────────────────
+
+  El procesamiento se realiza en etapas con indicadores de avance:
+
+  1. Extracción del ZIP
+  2. Análisis de PDFs (barra de progreso por documento)
+  3. Generación de reportes activos
+
+  Al finalizar se muestra un resumen con:
+    - Cantidad de documentos procesados
+    - Total de archivos embebidos encontrados
+    - Tiempo total de procesamiento
+    - Lista de reportes generados
+    - Advertencias si algún documento tuvo errores menores
+
+  Presione Enter para volver al menú principal.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. OPCIÓN 2 — OPCIONES (ACTIVAR/DESACTIVAR REPORTES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Permite habilitar o deshabilitar cada reporte de forma individual.
+Un reporte desactivado NO se genera en el próximo procesamiento.
+
+Para activar o desactivar un reporte:
+  1. Escriba el número del reporte y presione Enter.
+     El estado cambia entre Activo ↔ Inactivo.
+  2. Repita para cada reporte que desee modificar.
+  3. Escriba  0  para guardar los cambios y volver al menú.
+
+La configuración se guarda en el archivo gdea_config.json y
+se mantiene entre sesiones.
+
+  N°   Reporte
+  ────────────────────────────────────────────────────
+   1   Carátula TXT
+   2   Índice CSV
+   3   Firmantes CSV
+   4   Destinatarios CSV
+   5   Listado de archivos embebidos CSV
+   6   Extracción de archivos embebidos
+   7   PDF consolidado
+   8   Texto consolidado TXT
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. REPORTES GENERADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Todos los reportes se guardan en la carpeta de salida indicada.
+
+
+  ── 8.1  caratula.txt ────────────────────────────────────
+
+  Texto extraído del documento PV carátula del expediente.
+
+  Contiene:
+    - Texto completo del PV carátula
+    - Total de documentos en el expediente
+    - Total de archivos embebidos
+    - Fecha y hora de procesamiento
+
+
+  ── 8.2  indice.csv ─────────────────────────────────────
+
+  Una fila por cada documento del expediente.
+
+  Columnas:
+  ┌──────────────────────┬────────────────────────┐
+  │ numero_de_orden              │ Número de orden en el expediente│
+  │ numero_de_documento          │ Código GDE completo             │
+  │ fecha_documento              │ Fecha del documento (DD/MM/AAAA)│
+  │ referencia                   │ Asunto o referencia             │
+  │ cantidad_de_paginas          │ Número de páginas del PDF       │
+  │ cantidad_de_archivos_emb...  │ Cantidad de archivos embebidos  │
+  │ cantidad_de_firmantes        │ Número de firmantes digitales   │
+  │ nombre_UF                    │ Nombre del último firmante      │
+  │ cargo_UF                     │ Cargo del último firmante       │
+  │ area_UF                      │ Área del último firmante        │
+  └──────────────────────┴────────────────────────┘
+
+  NOTA: nombre_UF aparece en MAYÚSCULAS.
+        Si el firmante actúa "En Ejercicio" (E/E), el campo
+        cargo_UF muestra "E/E" antes del cargo (ej: "E/E Jefe
+        de Sección").
+
+
+  ── 8.3  firmantes.csv ───────────────────────────────────
+
+  Una fila por cada firmante digital de cada documento.
+
+  Columnas:
+  ┌──────────────┬────────────────────────────────┐
+  │ numero_de_orden   │ Número de orden en el expediente           │
+  │ codigo_documento  │ Código GDE del documento                   │
+  │ fecha_documento   │ Fecha del documento                        │
+  │ nombre_firmante   │ Nombre del firmante (en MAYÚSCULAS)        │
+  │ fecha_firma       │ Fecha y hora de la firma digital           │
+  │ cargo_firmante    │ Cargo del firmante                         │
+  │ area_firmante     │ Área o repartición del firmante            │
+  └──────────────┴────────────────────────────────┘
+
+  Solo se registran firmantes humanos. Los sellos de confirmación
+  del sistema GDE no se incluyen.
+
+
+  ── 8.4  destinatarios.csv ────────────────────────────────
+
+  Una fila por cada destinatario de documentos tipo ME y NO.
+
+  Columnas:
+  ┌──────────────┬────────────────────────────────┐
+  │ numero_de_orden   │ Número de orden en el expediente           │
+  │ codigo_documento  │ Código GDE del documento                   │
+  │ fecha_documento   │ Fecha del documento                        │
+  │ A_COPIA_A         │ Tipo de destinatario: A  ó  COPIA A        │
+  │ nombre            │ Nombre del destinatario                    │
+  │ area              │ Código de área del destinatario            │
+  └──────────────┴────────────────────────────────┘
+
+  Solo se generan registros para documentos ME (Memorando) y
+  NO (Nota). Los documentos de otros tipos no se incluyen.
+
+
+  ── 8.5  listado_embebidos.csv ─────────────────────────────
+
+  Una fila por cada archivo embebido encontrado en el expediente.
+
+  Columnas:
+  ┌──────────────────────┬────────────────────────┐
+  │ numero_de_orden      │ Número de orden del documento contenedor│
+  │ numero_de_documento  │ Código GDE del documento contenedor     │
+  │ fecha_documento      │ Fecha del documento contenedor          │
+  │ nombre_archivo_emb…  │ Nombre del archivo embebido             │
+  │ tamaño               │ Tamaño del archivo (bytes, KB, MB…)     │
+  └──────────────────────┴────────────────────────┘
+
+  Solo se incluyen documentos que contengan al menos un archivo
+  embebido. Si ningún documento tiene embebidos, el archivo se
+  genera vacío (solo con encabezado).
+
+
+  ── 8.6  embebidos/ ──────────────────────────────────────
+
+  Carpeta con los archivos embebidos extraídos de los PDFs.
+
+  Estructura:
+    embebidos/
+      0002/          ← número de orden del documento
+        informe.xlsx
+        anexo.pdf
+        0002-001/    ← si el PDF embebido tiene sus propios embebidos
+          datos.docx
+
+  Si un documento no tiene embebidos, no se crea su carpeta.
+  Si ningún documento tiene embebidos, la carpeta no se crea.
+
+
+  ── 8.7  consolidado.pdf ──────────────────────────────────
+
+  PDF único con todos los documentos del expediente fusionados,
+  en orden de número de orden. El texto es seleccionable.
+
+  Si el expediente tiene más de 100 documentos, el programa
+  pregunta si desea seccionar el consolidado en partes de 100:
+    s → genera consolidado_parte_01.pdf, consolidado_parte_02.pdf, …
+    n → genera un único consolidado.pdf con todos los documentos
+
+
+  ── 8.8  consolidado_txt.txt ───────────────────────────────
+
+  Archivo de texto plano con el contenido de todos los documentos
+  del expediente, en orden de número de orden. Cada documento
+  está separado por un encabezado identificador.
+
+  Si el expediente tiene más de 100 documentos, el programa
+  ofrece la misma opción de seccionado que para el PDF consolidado:
+    s → genera consolidado_txt_parte_01.txt, consolidado_txt_parte_02.txt, …
+    n → genera un único consolidado_txt.txt con todos los documentos
+
+  NOTA: La pregunta de seccionado se realiza una sola vez y aplica
+        simultáneamente al PDF consolidado y al TXT consolidado.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. VALIDACIONES Y MENSAJES DE ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mensaje                             Causa y solución
+──────────────────────────────────────────────────────
+"El archivo no existe"              La ruta ingresada es incorrecta.
+                                    Verifique que el archivo exista.
+
+"El nombre del archivo ZIP debe     El ZIP no pertenece al sistema
+ comenzar con EX-"                  GDE o fue renombrado.
+
+"El archivo no es un ZIP válido"    El archivo está dañado o no es
+                                    un ZIP real.
+
+"No se encontraron archivos PDF     El ZIP no contiene PDFs en su
+ en el ZIP"                         interior.
+
+"Esta carpeta ya fue procesada      Se está usando una carpeta que
+ anteriormente"                     ya tiene reportes. Puede
+                                    sobreescribir (s) o elegir otra
+                                    carpeta (n).
+
+"N documentos con advertencias"     Algunos PDFs no pudieron
+                                    analizarse completamente. Los
+                                    demás reportes se generan igual.
+                                    Los documentos problemáticos se
+                                    listan al final del proceso.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. PORTABILIDAD — MOVER EL PROGRAMA A OTRO EQUIPO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Para usar el programa en otro equipo:
+
+  1. Copiar TODA la carpeta del programa al nuevo equipo.
+  2. Verificar que se cumplan los requerimientos para su uso.
+  3. A partir de entonces, usar  GDEA.exe normalmente.
+
+La configuración de reportes activos/inactivos (gdea_config.json)
+si también se copia y se mantiene al trasladar la carpeta.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. PREGUNTAS FRECUENTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P: ¿Puedo procesar varios expedientes?
+R: Sí. Cada procesamiento genera sus reportes en la carpeta de
+   salida que usted indique. Use carpetas diferentes para cada
+   expediente.
+
+P: ¿Qué pasa si cierro el programa a mitad de proceso?
+R: Los reportes que ya se habían generado quedan en la carpeta de
+   salida. Puede volver a procesar el mismo expediente eligiendo
+   sobreescribir cuando el programa lo pregunte.
+
+P: ¿Por qué algunos campos del índice o firmantes aparecen vacíos?
+R: Algunos documentos del sistema GDE pueden no tener firmantes
+   registrados (por ejemplo, adjuntos o documentos en borrador).
+   Esto es normal y no indica un error.
+
+P: ¿Los reportes CSV se pueden abrir en Excel?
+R: Sí. Al abrir un archivo .csv en Excel, utilice la opción
+   "Desde texto/CSV" o "Datos → Obtener datos externos" para
+   asegurarse de que los tildes y caracteres especiales se
+   visualicen correctamente (codificación UTF-8 con BOM).
+
+P: ¿Qué es un archivo embebido?
+R: Algunos documentos del sistema GDE contienen archivos
+   adjuntos dentro del propio PDF (planillas Excel, PDFs
+   adicionales, etc.). GDEA los extrae automáticamente a la
+   carpeta  embebidos/  dentro de la carpeta de salida.
+
+P: ¿Para qué sirve el PDF consolidado?
+R: El consolidado fusiona todos los documentos del expediente
+   en un único PDF en orden de número de orden, facilitando
+   la lectura completa del expediente y su impresión.
+
+P: ¿Para qué sirve el TXT consolidado?
+R: Similar al PDF consolidado pero en formato texto plano, útil
+   para búsquedas rápidas de contenido o para procesar el texto
+   en otras herramientas.
+
+───────────────────────────────────────────────────────

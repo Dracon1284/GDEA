@@ -1,0 +1,41 @@
+# ── Entorno virtual Python ─────────────────────────────────────────
+.venv/
+
+# ── PyInstaller ─────────────────────────────────────────────────────
+dist/
+build/
+*.spec.bak
+
+# ── Configuración de usuario (se genera al primer uso) ──────────────
+gdea_config.json
+
+# ── Claude Code (configuración local de desarrollo) ─────────────────
+.claude/
+
+# ── Archivos de ejemplo con datos reales ────────────────────────────
+Ejemplo expediente/
+Ejemplo de IF/
+
+# ── Marcadores de procesamiento generados por el programa ───────────
+.gdea_procesado
+
+# ── Wheels pre-compilados para instalación offline (binarios pesados) ──
+V1_instalacion/distribucion/
+
+# ── Archivos internos de desarrollo ─────────────────────────────────
+Sumission details.png
+Reporte bugs y mejoras.txt
+
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+
+# ── Sistemas operativos ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,17 @@
+# Normalizar saltos de línea: checkout en el formato del SO, commit siempre LF
+* text=auto
+
+# Archivos que siempre deben tener CRLF en Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Archivos que siempre deben tener LF (scripts Unix)
+*.sh text eol=lf
+
+# Binarios: no tocar los saltos de línea
+*.ico binary
+*.whl binary
+*.pdf binary
+*.zip binary
+*.png binary
+*.jpg binary

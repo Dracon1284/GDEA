@@ -1,0 +1,25 @@
+Opción A — Wheels offline (recomendada)
+En la máquina con internet (una sola vez):
+
+Correr setup.bat (si no lo hiciste)
+Correr descargar_dependencias.bat → crea la carpeta wheels/
+Copiar al USB:
+
+Toda la carpeta del proyecto (incluyendo wheels/)
+El instalador de Python desde python.org/downloads (el .exe del instalador, ~25 MB)
+En la máquina sin internet:
+
+Instalar Python (marcar "Add Python to PATH")
+Correr setup_offline.bat
+Correr run.bat
+Opción B — Ejecutable standalone
+En la máquina con internet:
+
+Correr crear_ejecutable.bat → genera la carpeta dist\GDEA\
+Copiar al USB:
+
+Solo la carpeta dist\GDEA\ (~300 MB)
+En la máquina sin internet:
+
+Ejecutar GDEA.exe directamente. No requiere Python.
+Recomiendo la Opción A para este proyecto: más confiable con PyMuPDF (que tiene DLLs nativas), más fácil de actualizar el código a futuro, y el equipo destino solo necesita Python instalado (el instalador pesa ~25 MB). La Opción B es ideal si el equipo destino es de otra persona y preferís entregarle algo más simple.
