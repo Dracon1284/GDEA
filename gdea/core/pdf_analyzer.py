@@ -52,7 +52,7 @@ _RE_SERIALNUM = re.compile(
 _RE_OU = re.compile(r"OU\s*=\s*([^,\n]+)", re.IGNORECASE)
 _RE_O  = re.compile(r"(?<![A-Z])O\s*=\s*([^,\n]+)", re.IGNORECASE)
 _RE_SIGN_DATE = re.compile(
-    r"Date\s*:\s*(\d{4}\.\d{2}\.\d{2}\s+\d{2}:\d{2}:\d{2}[^\n]*)",
+    r"Date\s*:\s*(\d{4}\.\d{2}\.\d{2}\s+\d{2}:\d{2}:\d{2})",
     re.IGNORECASE,
 )
 
@@ -173,6 +173,7 @@ def analizar_pdf(filepath: str, numero_orden_override: str = None) -> Documento:
         for page in pdf:
             texto_completo += page.get_text() + "\n"
 
+        doc.texto_completo = texto_completo
         doc.fecha_documento = _extraer_fecha(texto_completo)
         doc.referencia = _extraer_referencia(texto_completo)
         doc.firmantes = _extraer_firmantes(texto_completo, pdf, meta["tipo"])

@@ -10,12 +10,6 @@ de texto plano con encabezados separadores por documento.
 from pathlib import Path
 from typing import List, Callable, Optional
 
-try:
-    import fitz
-    FITZ_OK = True
-except ImportError:
-    FITZ_OK = False
-
 from ..core.models import Documento
 
 _SEP = "=" * 80
@@ -31,8 +25,6 @@ def generar_consolidado_txt(
     Genera el(los) TXT consolidado(s) en output_dir.
     Devuelve lista con las rutas de los archivos generados.
     """
-    if not FITZ_OK:
-        raise RuntimeError("PyMuPDF no está instalado. No se puede generar el consolidado TXT.")
 
     output_path = Path(output_dir)
 
@@ -60,15 +52,10 @@ def _procesar_lote(
     with open(ruta_salida, "w", encoding="utf-8") as f:
         for documento in documentos:
             _escribir_encabezado(f, documento)
-            try:
-                doc = fitz.open(documento.filepath)
-                for page in doc:
-                    texto = page.get_text()
-                    if texto.strip():
-                        f.write(texto)
-                doc.close()
-            except Exception:
-                f.write("[Error al extraer texto del documento]\n")
+            if documento.texto_completo:
+                f.write(documento.texto_completo)
+            else:
+                f.write("[Texto no disponible]\n")
             f.write("\n\n")
             if callback:
                 callback()

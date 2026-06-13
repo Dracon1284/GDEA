@@ -43,6 +43,8 @@ class Documento:
     destinatarios: List[Destinatario] = field(default_factory=list)
     embebidos: List[ArchivoEmbebido] = field(default_factory=list)
 
+    texto_completo: str = ""
+
     error: str = ""   # Mensaje de error si el análisis falló
 
     @property

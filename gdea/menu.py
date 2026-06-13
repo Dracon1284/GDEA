@@ -106,7 +106,7 @@ class GDEAMenu:
         console.print(Text(BANNER, style="bold cyan"), justify="center")
         console.print(
             Panel(
-                "[bold white]Procesador de Expedientes Electrónicos GDE - V1.1[/bold white]",
+                "[bold white]Procesador de Expedientes Electrónicos GDE - V1.2[/bold white]",
                 style="cyan",
                 padding=(0, 2),
             )

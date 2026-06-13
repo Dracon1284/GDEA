@@ -15,7 +15,7 @@ else:
 _CONFIG_FILE = _BASE_DIR / "gdea_config.json"
 _MARKER_FILENAME = ".gdea_procesado"
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # Definición de los reportes disponibles
 REPORTES = {
