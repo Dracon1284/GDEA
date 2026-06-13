@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Damian Patricio Soto
 """
-Reporte 1: Carátula del expediente en formato TXT.
+Reporte 1: Carátula y orden del expediente en formato TXT.
 """
 from datetime import datetime
 from pathlib import Path
@@ -14,20 +14,22 @@ _SEP_H = "=" * 70
 _SEP_L = "─" * 70
 
 
-def generar_caratula(
+def generar_caratula_y_orden(
     doc_caratula: Documento,
     texto_caratula: str,
     todos_documentos: List[Documento],
     output_dir: str,
 ) -> str:
-    """Genera caratula.txt en output_dir. Devuelve la ruta del archivo generado."""
-    salida = Path(output_dir) / "caratula.txt"
+    """Genera caratula_y_orden.txt en output_dir. Devuelve la ruta del archivo generado."""
+    salida = Path(output_dir) / "caratula_y_orden.txt"
 
     total_docs      = len(todos_documentos)
     total_embebidos = sum(d.cantidad_embebidos for d in todos_documentos)
     total_hojas     = sum(d.cantidad_paginas for d in todos_documentos)
+    firma_ant       = _firma_mas_antigua(todos_documentos)
     firma_rec       = _firma_mas_reciente(todos_documentos)
-    dias_str        = _calcular_dias(doc_caratula.fecha_documento, firma_rec)
+    dias_caratula   = _calcular_dias_caratula(doc_caratula.fecha_documento, firma_rec)
+    dias_firmas     = _calcular_dias_firmas(firma_ant, firma_rec)
     orden           = _verificar_orden(todos_documentos)
 
     lineas = [
@@ -42,31 +44,43 @@ def generar_caratula(
         "  RESUMEN DEL EXPEDIENTE",
         _SEP_L,
         "",
-        f"  Total de documentos:              {total_docs}",
-        f"  Total de archivos embebidos:      {total_embebidos}",
-        f"  Total de hojas:                   {total_hojas}",
+        f"  Total de documentos:                             {total_docs}",
+        f"  Total de archivos embebidos:                     {total_embebidos}",
+        f"  Total de hojas:                                  {total_hojas}",
     ]
 
-    if firma_rec:
+    if firma_ant:
         lineas.append(
-            f"  Firma más reciente:               {firma_rec['fecha']}  (doc. {firma_rec['orden']})"
+            f"  Firma más antigua:                               {firma_ant['fecha']}  (doc. {firma_ant['orden']})"
         )
     else:
         lineas.append(
-            "  Firma más reciente:               (sin firmas detectadas)"
+            "  Firma más antigua:                               (sin firmas detectadas)"
+        )
+
+    if firma_rec:
+        lineas.append(
+            f"  Firma más reciente:                              {firma_rec['fecha']}  (doc. {firma_rec['orden']})"
+        )
+    else:
+        lineas.append(
+            "  Firma más reciente:                              (sin firmas detectadas)"
         )
 
     lineas.append(
-        f"  Días carátula → firma más reciente: {dias_str}"
+        f"  Días entre firma más antigua y firma más reciente: {dias_firmas}"
+    )
+    lineas.append(
+        f"  Días entre carátula y firma más reciente:          {dias_caratula}"
     )
 
     if orden["ordenado"]:
         lineas.append(
-            "  Documentos en orden cronológico:  Sí"
+            "  Documentos en orden cronológico:                 Sí"
         )
     else:
         lineas.append(
-            "  Documentos en orden cronológico:  No (Ver sección ORDEN DOCUMENTOS)"
+            "  Documentos en orden cronológico:                 No (Ver sección ORDEN DOCUMENTOS)"
         )
 
     lineas += [
@@ -124,6 +138,20 @@ def _parse_doc(fecha_str: str) -> Optional[datetime]:
         return None
 
 
+def _firma_mas_antigua(documentos: List[Documento]) -> Optional[dict]:
+    menor_dt = None
+    resultado = None
+    for doc in documentos:
+        uf = doc.ultimo_firmante
+        if not uf or not uf.fecha_firma:
+            continue
+        dt = _parse_firma(uf.fecha_firma)
+        if dt and (menor_dt is None or dt < menor_dt):
+            menor_dt = dt
+            resultado = {"fecha": uf.fecha_firma, "orden": doc.numero_orden}
+    return resultado
+
+
 def _firma_mas_reciente(documentos: List[Documento]) -> Optional[dict]:
     mejor_dt = None
     resultado = None
@@ -138,7 +166,7 @@ def _firma_mas_reciente(documentos: List[Documento]) -> Optional[dict]:
     return resultado
 
 
-def _calcular_dias(fecha_caratula: str, firma_rec: Optional[dict]) -> str:
+def _calcular_dias_caratula(fecha_caratula: str, firma_rec: Optional[dict]) -> str:
     if not firma_rec or not fecha_caratula:
         return "(no disponible)"
     dt_car   = _parse_doc(fecha_caratula)
@@ -146,6 +174,17 @@ def _calcular_dias(fecha_caratula: str, firma_rec: Optional[dict]) -> str:
     if not dt_car or not dt_firma:
         return "(no disponible)"
     dias = (dt_firma.date() - dt_car.date()).days
+    return f"{dias} días"
+
+
+def _calcular_dias_firmas(firma_ant: Optional[dict], firma_rec: Optional[dict]) -> str:
+    if not firma_ant or not firma_rec:
+        return "(no disponible)"
+    dt_ant = _parse_firma(firma_ant["fecha"])
+    dt_rec = _parse_firma(firma_rec["fecha"])
+    if not dt_ant or not dt_rec:
+        return "(no disponible)"
+    dias = (dt_rec.date() - dt_ant.date()).days
     return f"{dias} días"
 
 

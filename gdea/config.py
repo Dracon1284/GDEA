@@ -19,10 +19,10 @@ VERSION = "1.2.0"
 
 # Definición de los reportes disponibles
 REPORTES = {
-    "caratula": {
+    "caratula_y_orden": {
         "numero": 1,
-        "nombre": "Carátula del expediente (TXT)",
-        "descripcion": "Datos del PV carátula + total de documentos/embebidos + timestamp",
+        "nombre": "Carátula y orden del expediente (TXT)",
+        "descripcion": "Datos del PV carátula + resumen estadístico + verificación de orden cronológico",
         "enabled": True,
     },
     "indice": {

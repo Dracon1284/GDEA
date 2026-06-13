@@ -377,7 +377,7 @@ class GDEAMenu:
     # ─── Motor de procesamiento ───────────────────────────────────────────────
 
     def _procesar(self, zip_path: str, output_dir: str, tipo: str = "EX"):
-        from .reports.caratula import generar_caratula
+        from .reports.caratula_y_orden import generar_caratula_y_orden
         from .reports.indice import generar_indice
         from .reports.firmantes import generar_firmantes
         from .reports.destinatarios import generar_destinatarios
@@ -453,14 +453,14 @@ class GDEAMenu:
         # ── Paso 3: Generar reportes ──────────────────────────────────────────
         resultados = {}
 
-        if self.config.get("caratula"):
-            with console.status("[cyan]Generando carátula TXT...[/cyan]"):
+        if self.config.get("caratula_y_orden"):
+            with console.status("[cyan]Generando carátula y orden TXT...[/cyan]"):
                 try:
                     if caratula_doc:
-                        ruta = generar_caratula(caratula_doc, caratula_doc.texto_completo, documentos, output_dir)
-                        resultados["caratula"] = ruta
+                        ruta = generar_caratula_y_orden(caratula_doc, caratula_doc.texto_completo, documentos, output_dir)
+                        resultados["caratula_y_orden"] = ruta
                     else:
-                        resultados["caratula"] = None
+                        resultados["caratula_y_orden"] = None
                         console.print("  [yellow]!!![/yellow]  No se encontró documento PV carátula")
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Carátula: {e}")
