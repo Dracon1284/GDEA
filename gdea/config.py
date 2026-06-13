@@ -13,7 +13,7 @@ else:
     _BASE_DIR = Path(__file__).parent.parent
 
 _CONFIG_FILE = _BASE_DIR / "gdea_config.json"
-_MARKER_FILENAME = ".gdea_procesado"
+_MARKER_FILENAME = "log.txt"
 
 VERSION = "1.2.0"
 
@@ -94,22 +94,18 @@ def guardar_config(config: dict):
         pass
 
 
-def crear_marker(output_dir: str, zip_filename: str):
-    """Crea archivo marcador en el directorio de salida."""
-    from datetime import datetime
-    marker_path = Path(output_dir) / _MARKER_FILENAME
-    with open(marker_path, "w", encoding="utf-8") as f:
-        f.write(f"zip={zip_filename}\n")
-        f.write(f"fecha={datetime.now().isoformat()}\n")
-
-
 def verificar_marker(output_dir: str) -> tuple:
-    """Verifica si el directorio ya fue procesado. Devuelve (existe, info_str)."""
-    marker_path = Path(output_dir) / _MARKER_FILENAME
-    if marker_path.exists():
+    """Verifica si el directorio ya fue procesado (existe log.txt). Devuelve (existe, info_str)."""
+    log_path = Path(output_dir) / _MARKER_FILENAME
+    if log_path.exists():
         try:
-            contenido = marker_path.read_text(encoding="utf-8")
-            return True, contenido.strip()
+            contenido = log_path.read_text(encoding="utf-8-sig")
+            info_lineas = [
+                l.strip()
+                for l in contenido.splitlines()
+                if l.strip() and not l.strip().startswith("=") and "GDEA —" not in l
+            ]
+            return True, "\n".join(info_lineas)
         except Exception:
             return True, "(sin información)"
     return False, ""

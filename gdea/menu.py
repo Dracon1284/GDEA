@@ -19,12 +19,12 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeEl
 from rich.prompt import Prompt
 from rich import box
 
-from .config import REPORTES, VERSION, cargar_config, guardar_config, crear_marker, verificar_marker
+from .config import REPORTES, VERSION, cargar_config, guardar_config, verificar_marker
 from .core.zip_handler import (
     validar_zip, extraer_zip, obtener_pdfs,
     clasificar_zip, pdfs_tienen_prefijo_orden, obtener_pdfs_sin_orden,
 )
-from .core.pdf_analyzer import analizar_pdf, extraer_texto_completo, es_caratula_expediente
+from .core.pdf_analyzer import analizar_pdf, es_caratula_expediente
 
 console = Console()
 
@@ -445,25 +445,19 @@ class GDEAMenu:
         caratula_doc = None
         for doc in documentos:
             if doc.tipo == "PV":
-                texto = extraer_texto_completo(doc.filepath)
-                if es_caratula_expediente(doc, texto) or caratula_doc is None:
+                if es_caratula_expediente(doc, doc.texto_completo) or caratula_doc is None:
                     caratula_doc = doc
-                    caratula_texto = texto
-                    if es_caratula_expediente(doc, texto):
+                    if es_caratula_expediente(doc, doc.texto_completo):
                         break
 
         # ── Paso 3: Generar reportes ──────────────────────────────────────────
-        total_embebidos = sum(d.cantidad_embebidos for d in documentos)
         resultados = {}
-
-        # Marcar como procesado antes de generar (en caso de error parcial)
-        crear_marker(output_dir, Path(zip_path).name)
 
         if self.config.get("caratula"):
             with console.status("[cyan]Generando carátula TXT...[/cyan]"):
                 try:
                     if caratula_doc:
-                        ruta = generar_caratula(caratula_doc, caratula_texto, len(documentos), total_embebidos, output_dir)
+                        ruta = generar_caratula(caratula_doc, caratula_doc.texto_completo, documentos, output_dir)
                         resultados["caratula"] = ruta
                     else:
                         resultados["caratula"] = None
@@ -564,8 +558,16 @@ class GDEAMenu:
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Destinatarios: {e}")
 
-        # ── Resumen final ─────────────────────────────────────────────────────
+        # ── Paso 4: Generar log (marcador de procesamiento) ───────────────────
+        from .reports.log import generar_log
         duracion = (datetime.now() - inicio).total_seconds()
+        try:
+            ruta_log = generar_log(zip_path, documentos, output_dir, VERSION, duracion)
+            resultados["log"] = ruta_log
+        except Exception as e:
+            console.print(f"  [red]-[/red]  Log: {e}")
+
+        # ── Resumen final ─────────────────────────────────────────────────────
         self._mostrar_resumen_final(documentos, resultados, errores, output_dir, duracion)
 
     # ─── Resumen final ────────────────────────────────────────────────────────

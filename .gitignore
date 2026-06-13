@@ -16,9 +16,6 @@ gdea_config.json
 Ejemplo expediente/
 Ejemplo de IF/
 
-# ── Marcadores de procesamiento generados por el programa ───────────
-.gdea_procesado
-
 # ── Wheels pre-compilados para instalación offline (binarios pesados) ──
 V1_instalacion/distribucion/
 
