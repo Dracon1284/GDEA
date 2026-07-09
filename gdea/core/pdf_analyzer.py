@@ -93,10 +93,12 @@ _MESES_ES = {
     "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
     "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12",
 }
-_RE_REFERENCIA = re.compile(
-    r"(?:REFERENCIA|REF\.|ASUNTO|OBJETO|TEMA)\s*[:\-]\s*([^\n]{5,200})",
-    re.IGNORECASE,
-)
+# Inicio del bloque de referencia. Solo la etiqueta "Referencia:" — se descartan
+# "Asunto:" / "RE:" que aparecen en emails embebidos y generan falsos positivos.
+_RE_REFERENCIA_INICIO = re.compile(r"^\s*Referencia\s*:\s*(.*)$", re.IGNORECASE)
+
+# Fin del bloque de referencia en documentos ME/NO: inicio de los destinatarios.
+_RE_REFERENCIA_FIN = re.compile(r"^\s*(?:A|Con\s+Copia\s+A)\s*:", re.IGNORECASE)
 
 # ─── Patrones de destinatarios (ME / NO) ──────────────────────────────────────
 
@@ -269,11 +271,54 @@ def _normalizar_fecha_num(fecha_str: str) -> str:
 
 
 def _extraer_referencia(texto: str) -> str:
-    """Busca la referencia/asunto del documento."""
-    match = _RE_REFERENCIA.search(texto)
-    if match:
-        return match.group(1).strip()[:200]  # Max 200 chars
+    """
+    Busca la referencia del documento.
+
+    La referencia GDE puede ocupar varias líneas por el ajuste de línea del PDF.
+    Se unen las líneas siguientes hasta encontrar una línea en blanco o el inicio
+    del bloque de destinatarios ("A:" / "Con Copia A:", en documentos ME/NO).
+    Solo se considera la etiqueta "Referencia:" (no "Asunto:" ni "RE:").
+    """
+    lineas = texto.splitlines()
+    for i, linea in enumerate(lineas):
+        m = _RE_REFERENCIA_INICIO.match(linea)
+        if not m:
+            continue
+
+        partes = []
+        primera = m.group(1).strip()
+        if primera:
+            partes.append(primera)
+
+        for siguiente in lineas[i + 1:]:
+            if not siguiente.strip():
+                break  # línea en blanco → fin de la referencia
+            if _RE_REFERENCIA_FIN.match(siguiente):
+                break  # inicio de destinatarios (ME/NO)
+            partes.append(siguiente.strip())
+            if len(partes) >= 6:
+                break  # tope de seguridad
+
+        return _unir_lineas_referencia(partes)[:300]
+
     return ""
+
+
+def _unir_lineas_referencia(partes: List[str]) -> str:
+    """
+    Une las líneas de una referencia multilínea. Normalmente separa con un espacio,
+    salvo cuando la línea previa termina en '-' (código o palabra cortada por el
+    ajuste de línea, p. ej. 'EX-' + '2024...' → 'EX-2024...'), donde une sin espacio.
+    """
+    if not partes:
+        return ""
+    resultado = partes[0]
+    for p in partes[1:]:
+        if resultado.endswith("-"):
+            resultado += p
+        else:
+            resultado += " " + p
+    return resultado.strip()
 
 
 def _extraer_firmantes(texto: str, pdf, tipo: str) -> List[Firmante]:
