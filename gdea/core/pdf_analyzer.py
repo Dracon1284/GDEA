@@ -100,6 +100,12 @@ _RE_REFERENCIA_INICIO = re.compile(r"^\s*Referencia\s*:\s*(.*)$", re.IGNORECASE)
 # Fin del bloque de referencia en documentos ME/NO: inicio de los destinatarios.
 _RE_REFERENCIA_FIN = re.compile(r"^\s*(?:A|Con\s+Copia\s+A)\s*:", re.IGNORECASE)
 
+# Línea de cierre del metadato GEDO que sigue a la referencia.
+_RE_DOC_IMPORTADO = re.compile(r"^\s*El documento fue importado", re.IGNORECASE)
+
+# Código GDE (TIPO-AÑO-NÚMERO-...). Identifica a qué documento pertenece un bloque.
+_RE_CODIGO_GDE = re.compile(r"^\s*([A-Z]{2,7}-\d{4}-\d{5,}[-A-Za-z0-9%#]*)")
+
 # ─── Patrones de destinatarios (ME / NO) ──────────────────────────────────────
 
 # Detecta la línea de etiqueta "A:" o "Con Copia A:"
@@ -177,7 +183,7 @@ def analizar_pdf(filepath: str, numero_orden_override: str = None) -> Documento:
 
         doc.texto_completo = texto_completo
         doc.fecha_documento = _extraer_fecha(texto_completo)
-        doc.referencia = _extraer_referencia(texto_completo)
+        doc.referencia = _extraer_referencia(texto_completo, meta["codigo"])
         doc.firmantes = _extraer_firmantes(texto_completo, pdf, meta["tipo"])
 
         if meta["tipo"] in ("ME", "NO"):
@@ -270,38 +276,70 @@ def _normalizar_fecha_num(fecha_str: str) -> str:
     return fecha_str
 
 
-def _extraer_referencia(texto: str) -> str:
-    """
-    Busca la referencia del documento.
+def _codigo_prefijo(codigo: str) -> str:
+    """Devuelve el prefijo único TIPO-AÑO-NÚMERO de un código GDE (ignora área/organismo)."""
+    partes = codigo.split("-")
+    return "-".join(partes[:3]).upper() if len(partes) >= 3 else codigo.upper()
 
-    La referencia GDE puede ocupar varias líneas por el ajuste de línea del PDF.
-    Se unen las líneas siguientes hasta encontrar una línea en blanco o el inicio
-    del bloque de destinatarios ("A:" / "Con Copia A:", en documentos ME/NO).
+
+def _extraer_referencia(texto: str, codigo: str = "") -> str:
+    """
+    Busca la referencia propia del documento.
+
+    Un PDF GDE puede contener varias etiquetas "Referencia:": una por cada "Hoja
+    Adicional de Firmas" de los documentos que importa/embebe. Se descartan los
+    bloques cuyo código GDE siguiente pertenece a otro documento (ajeno) y se toma
+    el primer bloque restante (contenido propio o metadato propio del documento).
+
+    La referencia puede ocupar varias líneas por el ajuste de línea del PDF; se unen
+    hasta una línea en blanco, el inicio de destinatarios ("A:" / "Con Copia A:"),
+    el cierre del metadato GEDO, un código GDE, o una línea terminada en punto.
     Solo se considera la etiqueta "Referencia:" (no "Asunto:" ni "RE:").
     """
     lineas = texto.splitlines()
-    for i, linea in enumerate(lineas):
-        m = _RE_REFERENCIA_INICIO.match(linea)
-        if not m:
-            continue
+    propio = _codigo_prefijo(codigo) if codigo else ""
 
-        partes = []
-        primera = m.group(1).strip()
-        if primera:
-            partes.append(primera)
+    indices = [i for i, l in enumerate(lineas) if _RE_REFERENCIA_INICIO.match(l)]
+    if not indices:
+        return ""
 
-        for siguiente in lineas[i + 1:]:
-            if not siguiente.strip():
-                break  # línea en blanco → fin de la referencia
-            if _RE_REFERENCIA_FIN.match(siguiente):
-                break  # inicio de destinatarios (ME/NO)
-            partes.append(siguiente.strip())
-            if len(partes) >= 6:
-                break  # tope de seguridad
+    # Elegir el primer bloque que no pertenezca a un documento ajeno embebido.
+    seleccionado = None
+    for idx in indices:
+        cod_siguiente = ""
+        for l in lineas[idx + 1: idx + 7]:
+            m = _RE_CODIGO_GDE.match(l)
+            if m:
+                cod_siguiente = _codigo_prefijo(m.group(1))
+                break
+        if propio and cod_siguiente and cod_siguiente != propio:
+            continue  # bloque de un documento embebido/ajeno
+        seleccionado = idx
+        break
 
-        return _unir_lineas_referencia(partes)[:300]
+    if seleccionado is None:
+        seleccionado = indices[0]  # todos ajenos: usar el primero como último recurso
 
-    return ""
+    partes = []
+    primera = _RE_REFERENCIA_INICIO.match(lineas[seleccionado]).group(1).strip()
+    if primera:
+        partes.append(primera)
+        if primera.endswith("."):
+            return _unir_lineas_referencia(partes)[:300]
+
+    for siguiente in lineas[seleccionado + 1:]:
+        if not siguiente.strip():
+            break  # línea en blanco → fin de la referencia
+        if _RE_REFERENCIA_FIN.match(siguiente):
+            break  # inicio de destinatarios (ME/NO)
+        if _RE_DOC_IMPORTADO.match(siguiente) or _RE_CODIGO_GDE.match(siguiente):
+            break  # cierre del metadato GEDO
+        parte = siguiente.strip()
+        partes.append(parte)
+        if parte.endswith(".") or len(partes) >= 6:
+            break  # fin de oración o tope de seguridad
+
+    return _unir_lineas_referencia(partes)[:300]
 
 
 def _unir_lineas_referencia(partes: List[str]) -> str:
