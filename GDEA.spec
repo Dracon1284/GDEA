@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
+r"""
 Spec de PyInstaller para GDEA.
 Genera dist\GDEA\ con GDEA.exe + todas las dependencias.
 """
