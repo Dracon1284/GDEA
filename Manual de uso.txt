@@ -3,7 +3,7 @@
 ║                       MANUAL DE USO                                    ║
 ╚════════════════════════════════════════════════════╝
 
-Versión: 1.0
+Versión: 1.3
 Sistema compatible: Windows 10 u 11
 
 
@@ -23,14 +23,17 @@ Sistema compatible: Windows 10 u 11
      6.4  Progreso del procesamiento
   7. Opción 2 — Opciones (activar/desactivar reportes)
   8. Reportes generados
-     8.1  caratula.txt
-     8.2  indice.csv
-     8.3  firmantes.csv
-     8.4  destinatarios.csv
-     8.5  listado_embebidos.csv
-     8.6  embebidos/
-     8.7  consolidado.pdf
-     8.8  consolidado_txt.txt
+     8.1   reporte.xlsx           (Reporte Excel)
+     8.2   caratula_y_orden.txt   (Carátula y orden)
+     8.3   indice.csv
+     8.4   firmantes.csv
+     8.5   destinatarios.csv
+     8.6   listado_embebidos.csv
+     8.7   embebidos/
+     8.8   consolidado.pdf
+     8.9   consolidado.txt
+     8.10  documentos/
+     8.11  log.txt (siempre se genera)
   9. Validaciones y mensajes de error
  10. Portabilidad — mover el programa a otro equipo
  11. Preguntas frecuentes
@@ -63,7 +66,10 @@ Tipos de documentos que reconoce:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   - Windows 10 u 11
-  - El archivo ZIP del expediente debe comenzar con "EX-"
+  - Un archivo ZIP, que puede ser:
+      · un expediente GDE (nombre que comienza con "EX-")
+      · un paquete de documentos GDE ("Documentos-Ex-...")
+      · cualquier ZIP que contenga únicamente archivos PDF
 
 No se requiere instalar ningún software adicional. GDEA es un
 ejecutable portable que incluye todo lo necesario.
@@ -95,7 +101,7 @@ Se abre una ventana con el menú principal de GDEA.
 5. MENÚ PRINCIPAL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Al iniciar el programa aparece el menú principal con tres opciones:
+Al iniciar el programa aparece el menú principal con estas opciones:
 
   ┌──────────────────────────────────┐
   │  [1]  Iniciar procesamiento                   │
@@ -117,10 +123,14 @@ Para seleccionar una opción, escriba el número y presione Enter.
 Esta opción realiza el procesamiento completo de un expediente.
 Se realiza en tres pasos antes de iniciar.
 
+NOTA: Si no hay ningún reporte activo, el programa no inicia el
+      procesamiento y avisa que debe activar al menos uno en el
+      menú de Opciones (ver sección 7).
+
 
   ── 6.1  PASO 1: INGRESAR EL ARCHIVO ZIP ───────────────────────
 
-  El programa solicita la ruta al archivo ZIP del expediente.
+  El programa solicita la ruta al archivo ZIP.
 
   Puede ingresar de dos formas:
 
@@ -136,32 +146,40 @@ Se realiza en tres pasos antes de iniciar.
 
   b) RUTA A LA CARPETA QUE CONTIENE EL ZIP:
      Si escribe solo la ruta de una carpeta, el programa lista
-     automáticamente todos los archivos ZIP que comiencen con
-     "EX-" en esa carpeta.
+     automáticamente todos los archivos ZIP de esa carpeta.
      Ejemplo:
        C:\Expedientes
 
      Luego aparece un listado numerado para seleccionar el archivo:
        [1]  EX-... 1.zip
-       [2]  EX-... 2.zip
+       [2]  Documentos-Ex-... .zip
+       [3]  Caso KR14.zip
        [0]  Volver
 
-  Solo se procesan los archivos que empiezan con EX-
+  Se aceptan tres tipos de ZIP:
+    · Expedientes GDE          (nombre que empieza con "EX-")
+    · Paquetes de documentos   ("Documentos-Ex-...")
+    · ZIPs genéricos           (que contengan únicamente PDFs)
 
   Para volver al menú principal escriba  0  y presione Enter.
 
 
   ── 6.2  PASO 2: INGRESAR LA CARPETA DE SALIDA ────────────────────
 
-  El programa solicita la carpeta donde se guardarán los reportes.
+  El programa solicita la carpeta base donde se guardarán los
+  reportes. Dentro de ella se crea una subcarpeta para el
+  expediente:
+    · Expediente GDE / Documentos-Ex → "EX-XXXXXXXXXXXXX"
+    · ZIP genérico                   → "Reportes - <nombre del ZIP>"
 
   - Si la carpeta no existe, se crea automáticamente.
   - Si ingresa una carpeta que ya fue procesada anteriormente,
-    aparece una advertencia indicando la fecha de ese proceso.
-    Puede elegir sobreescribir (s) o ingresar otra carpeta (n).
+    aparece una advertencia con los datos de ese proceso (tomados
+    del archivo log.txt). Puede elegir sobreescribir (s) o ingresar
+    otra carpeta (n).
 
   Ejemplo de carpeta de salida:
-    C:\Reportes\Expediente_123456
+    C:\Reportes
 
   Para volver al paso anterior presione Enter sin escribir nada.
 
@@ -209,40 +227,87 @@ Para activar o desactivar un reporte:
   2. Repita para cada reporte que desee modificar.
   3. Escriba  0  para guardar los cambios y volver al menú.
 
-La configuración se guarda en el archivo gdea_config.json y
-se mantiene entre sesiones.
-
   N°   Reporte
   ────────────────────────────────────────────────────
-   1   Carátula TXT
-   2   Índice CSV
-   3   Firmantes CSV
-   4   Destinatarios CSV
-   5   Listado de archivos embebidos CSV
-   6   Extracción de archivos embebidos
-   7   PDF consolidado
-   8   Texto consolidado TXT
+   1   Reporte Excel (XLSX)
+   2   Carátula y orden del expediente (TXT)
+   3   Índice de documentos (CSV)
+   4   Registro de firmantes (CSV)
+   5   Destinatarios ME/NO (CSV)
+   6   Listado de archivos embebidos (CSV)
+   7   Extracción de archivos embebidos
+   8   Consolidado sin embebidos (PDF)
+   9   Texto consolidado sin embebidos (TXT)
+  10   Extracción de documentos
+
+COMANDOS RÁPIDOS (funcionan en mayúscula o minúscula):
+   A   Activar TODOS los reportes
+   B   Desactivar TODOS los reportes
+   C   Desactivar los reportes 2, 3, 4, 5, 6 y 9
+   D   Activar los reportes 2, 3, 4, 5, 6 y 9
+
+  El comando C es útil cuando solo se desea el Reporte Excel junto
+  con las extracciones y el consolidado, ya que el Excel contiene la
+  información de los reportes 2 a 6.
+
+La configuración se guarda en el archivo gdea_config.json y
+se mantiene entre sesiones.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 8. REPORTES GENERADOS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Todos los reportes se guardan en la carpeta de salida indicada.
+Todos los reportes se guardan en la subcarpeta de salida del
+expediente.
 
 
-  ── 8.1  caratula.txt ────────────────────────────────────
+  ── 8.1  reporte.xlsx  (Reporte Excel) ─────────────────────
 
-  Texto extraído del documento PV carátula del expediente.
+  Libro de Excel que reúne, en hojas separadas, la información de
+  los reportes tabulares del expediente. Es la forma más cómoda de
+  consultar todo el expediente en un solo archivo.
+
+  Hojas:
+    · Resumen           → datos de la carátula y del orden del
+                          expediente (mismos datos que 8.2), y si
+                          los documentos no están en orden
+                          cronológico, la tabla "ORDEN POR FECHA DE
+                          ÚLTIMO FIRMANTE".
+    · Índice            → equivalente a indice.csv (ver 8.3)
+    · Firmantes         → equivalente a firmantes.csv (ver 8.4)
+    · Destinatarios     → equivalente a destinatarios.csv (ver 8.5)
+    · Listado Embebidos → equivalente a listado_embebidos.csv (8.6)
+
+
+  ── 8.2  caratula_y_orden.txt ────────────────────────────
+
+  Texto extraído del documento PV carátula del expediente, más un
+  resumen estadístico y una verificación del orden cronológico.
 
   Contiene:
-    - Texto completo del PV carátula
-    - Total de documentos en el expediente
-    - Total de archivos embebidos
-    - Fecha y hora de procesamiento
+    - N° de documento y número de orden de la carátula
+    - RESUMEN DEL EXPEDIENTE:
+        · Total de documentos
+        · Total de archivos embebidos
+        · Total de hojas
+        · Firma más antigua  (fecha + número de orden)
+        · Firma más reciente (fecha + número de orden)
+        · Días entre la firma más antigua y la más reciente
+        · Días entre la carátula y la firma más reciente
+        · Documentos en orden cronológico:  Sí / No
+    - CONTENIDO CARÁTULA: texto completo del PV carátula
+    - ORDEN DOCUMENTOS: solo aparece si los documentos NO están en
+      orden cronológico. Muestra cómo quedarían ordenados por fecha
+      de firma del último firmante (número de orden y fecha).
+
+  NOTA: El orden se considera correcto si la fecha del último
+        firmante de cada documento sigue una secuencia (ascendente
+        o descendente). Dos documentos del mismo día no se
+        consideran desordenados.
 
 
-  ── 8.2  indice.csv ─────────────────────────────────────
+  ── 8.3  indice.csv ─────────────────────────────────────
 
   Una fila por cada documento del expediente.
 
@@ -251,7 +316,7 @@ Todos los reportes se guardan en la carpeta de salida indicada.
   │ numero_de_orden              │ Número de orden en el expediente│
   │ numero_de_documento          │ Código GDE completo             │
   │ fecha_documento              │ Fecha del documento (DD/MM/AAAA)│
-  │ referencia                   │ Asunto o referencia             │
+  │ referencia                   │ Referencia del documento        │
   │ cantidad_de_paginas          │ Número de páginas del PDF       │
   │ cantidad_de_archivos_emb...  │ Cantidad de archivos embebidos  │
   │ cantidad_de_firmantes        │ Número de firmantes digitales   │
@@ -266,7 +331,7 @@ Todos los reportes se guardan en la carpeta de salida indicada.
         de Sección").
 
 
-  ── 8.3  firmantes.csv ───────────────────────────────────
+  ── 8.4  firmantes.csv ───────────────────────────────────
 
   Una fila por cada firmante digital de cada documento.
 
@@ -285,13 +350,13 @@ Todos los reportes se guardan en la carpeta de salida indicada.
   del sistema GDE no se incluyen.
 
 
-  ── 8.4  destinatarios.csv ────────────────────────────────
+  ── 8.5  destinatarios.csv ────────────────────────────────
 
   Una fila por cada destinatario de documentos tipo ME y NO.
 
   Columnas:
   ┌──────────────┬────────────────────────────────┐
-  │ numero_de_orden   │ Número de orden en el expediente           │
+  │ numero_orden      │ Número de orden en el expediente           │
   │ codigo_documento  │ Código GDE del documento                   │
   │ fecha_documento   │ Fecha del documento                        │
   │ A_COPIA_A         │ Tipo de destinatario: A  ó  COPIA A        │
@@ -303,7 +368,7 @@ Todos los reportes se guardan en la carpeta de salida indicada.
   NO (Nota). Los documentos de otros tipos no se incluyen.
 
 
-  ── 8.5  listado_embebidos.csv ─────────────────────────────
+  ── 8.6  listado_embebidos.csv ─────────────────────────────
 
   Una fila por cada archivo embebido encontrado en el expediente.
 
@@ -321,7 +386,7 @@ Todos los reportes se guardan en la carpeta de salida indicada.
   genera vacío (solo con encabezado).
 
 
-  ── 8.6  embebidos/ ──────────────────────────────────────
+  ── 8.7  embebidos/ ──────────────────────────────────────
 
   Carpeta con los archivos embebidos extraídos de los PDFs.
 
@@ -337,10 +402,11 @@ Todos los reportes se guardan en la carpeta de salida indicada.
   Si ningún documento tiene embebidos, la carpeta no se crea.
 
 
-  ── 8.7  consolidado.pdf ──────────────────────────────────
+  ── 8.8  consolidado.pdf ──────────────────────────────────
 
   PDF único con todos los documentos del expediente fusionados,
-  en orden de número de orden. El texto es seleccionable.
+  en orden de número de orden, aplanados y con OCR. El texto es
+  seleccionable.
 
   Si el expediente tiene más de 100 documentos, el programa
   pregunta si desea seccionar el consolidado en partes de 100:
@@ -348,7 +414,7 @@ Todos los reportes se guardan en la carpeta de salida indicada.
     n → genera un único consolidado.pdf con todos los documentos
 
 
-  ── 8.8  consolidado_txt.txt ───────────────────────────────
+  ── 8.9  consolidado.txt ───────────────────────────────────
 
   Archivo de texto plano con el contenido de todos los documentos
   del expediente, en orden de número de orden. Cada documento
@@ -356,11 +422,32 @@ Todos los reportes se guardan en la carpeta de salida indicada.
 
   Si el expediente tiene más de 100 documentos, el programa
   ofrece la misma opción de seccionado que para el PDF consolidado:
-    s → genera consolidado_txt_parte_01.txt, consolidado_txt_parte_02.txt, …
-    n → genera un único consolidado_txt.txt con todos los documentos
+    s → genera consolidado_parte_01.txt, consolidado_parte_02.txt, …
+    n → genera un único consolidado.txt con todos los documentos
 
   NOTA: La pregunta de seccionado se realiza una sola vez y aplica
         simultáneamente al PDF consolidado y al TXT consolidado.
+
+
+  ── 8.10  documentos/ ─────────────────────────────────────
+
+  Carpeta con los PDFs individuales del expediente extraídos del
+  ZIP. Si este reporte (N° 10) está desactivado, la carpeta no se
+  conserva al finalizar el procesamiento.
+
+
+  ── 8.11  log.txt  (siempre se genera) ─────────────────────
+
+  Archivo de registro que deja constancia del procesamiento. Se
+  genera SIEMPRE, con independencia de los reportes activos, e
+  identifica que la carpeta ya fue procesada anteriormente.
+
+  Contiene:
+    - Versión del programa
+    - Fecha y hora del procesamiento
+    - Nombre del ZIP procesado
+    - Cantidad de documentos y de archivos embebidos
+    - Tiempo total del procesamiento
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -372,19 +459,27 @@ Mensaje                             Causa y solución
 "El archivo no existe"              La ruta ingresada es incorrecta.
                                     Verifique que el archivo exista.
 
-"El nombre del archivo ZIP debe     El ZIP no pertenece al sistema
- comenzar con EX-"                  GDE o fue renombrado.
+"El archivo debe tener extensión    El archivo seleccionado no es un
+ .zip"                              ZIP.
 
 "El archivo no es un ZIP válido"    El archivo está dañado o no es
                                     un ZIP real.
 
+"El ZIP contiene archivos que no    Un ZIP sin prefijo "EX-" o
+ son PDF"                           "Documentos-Ex-" debe contener
+                                    únicamente archivos PDF.
+
 "No se encontraron archivos PDF     El ZIP no contiene PDFs en su
  en el ZIP"                         interior.
 
+"No hay ningún reporte activo"      Todos los reportes están
+                                    desactivados. Active al menos uno
+                                    en el menú de Opciones.
+
 "Esta carpeta ya fue procesada      Se está usando una carpeta que
- anteriormente"                     ya tiene reportes. Puede
-                                    sobreescribir (s) o elegir otra
-                                    carpeta (n).
+ anteriormente"                     ya tiene reportes (existe log.txt).
+                                    Puede sobreescribir (s) o elegir
+                                    otra carpeta (n).
 
 "N documentos con advertencias"     Algunos PDFs no pudieron
                                     analizarse completamente. Los
@@ -412,9 +507,8 @@ si también se copia y se mantiene al trasladar la carpeta.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 P: ¿Puedo procesar varios expedientes?
-R: Sí. Cada procesamiento genera sus reportes en la carpeta de
-   salida que usted indique. Use carpetas diferentes para cada
-   expediente.
+R: Sí. Cada procesamiento genera sus reportes en la subcarpeta del
+   expediente, dentro de la carpeta base que usted indique.
 
 P: ¿Qué pasa si cierro el programa a mitad de proceso?
 R: Los reportes que ya se habían generado quedan en la carpeta de
@@ -425,6 +519,12 @@ P: ¿Por qué algunos campos del índice o firmantes aparecen vacíos?
 R: Algunos documentos del sistema GDE pueden no tener firmantes
    registrados (por ejemplo, adjuntos o documentos en borrador).
    Esto es normal y no indica un error.
+
+P: ¿Necesito el Reporte Excel y los CSV al mismo tiempo?
+R: No necesariamente. El Reporte Excel (N° 1) ya incluye la
+   información de los reportes 2 a 6. Si prefiere trabajar solo con
+   el Excel, puede usar el comando C del menú de Opciones para
+   desactivar esos reportes de una sola vez.
 
 P: ¿Los reportes CSV se pueden abrir en Excel?
 R: Sí. Al abrir un archivo .csv en Excel, utilice la opción

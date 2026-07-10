@@ -212,7 +212,7 @@ def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Docume
     # Si no están en orden cronológico, agregar el orden sugerido por fecha de firma
     if not orden["ordenado"] and orden["orden_sugerido"]:
         r = fila_inicio + len(filas) + 2
-        ws.cell(row=r, column=1, value="ORDEN SUGERIDO (por fecha de firma del último firmante)").font = Font(bold=True, color="1F4E78")
+        ws.cell(row=r, column=1, value="ORDEN POR FECHA DE ÚLTIMO FIRMANTE").font = Font(bold=True, color="1F4E78")
         r += 1
         for col, h in enumerate(["N° Orden", "Fecha firma último firmante"], 1):
             celda = ws.cell(row=r, column=col, value=h)
