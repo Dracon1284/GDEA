@@ -26,6 +26,12 @@ datas    += d
 binaries += b
 hiddenimports += h
 
+# openpyxl: generación del Reporte Excel (.xlsx)
+d, b, h = collect_all("openpyxl")
+datas    += d
+binaries += b
+hiddenimports += h
+
 # Módulos locales del paquete gdea
 hiddenimports += collect_submodules("gdea")
 

@@ -15,56 +15,68 @@ else:
 _CONFIG_FILE = _BASE_DIR / "gdea_config.json"
 _MARKER_FILENAME = "log.txt"
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
-# Definición de los reportes disponibles
+# Definición de los reportes disponibles (el orden define su numeración en el menú)
 REPORTES = {
-    "caratula_y_orden": {
+    "excel": {
         "numero": 1,
+        "nombre": "Reporte Excel (XLSX)",
+        "descripcion": "Resumen, índice, firmantes, destinatarios y embebidos en hojas de un .xlsx",
+        "enabled": True,
+    },
+    "caratula_y_orden": {
+        "numero": 2,
         "nombre": "Carátula y orden del expediente (TXT)",
         "descripcion": "Datos del PV carátula + resumen estadístico + verificación de orden cronológico",
         "enabled": True,
     },
     "indice": {
-        "numero": 2,
+        "numero": 3,
         "nombre": "Índice de documentos (CSV)",
         "descripcion": "Registro por documento con datos del último firmante",
         "enabled": True,
     },
     "firmantes": {
-        "numero": 3,
+        "numero": 4,
         "nombre": "Registro de firmantes (CSV)",
         "descripcion": "Un registro por firmante de cada documento",
         "enabled": True,
     },
     "destinatarios": {
-        "numero": 4,
+        "numero": 5,
         "nombre": "Destinatarios ME/NO (CSV)",
         "descripcion": "Registro de destinatarios en documentos tipo ME y NO",
         "enabled": True,
     },
     "listado_embebidos": {
-        "numero": 5,
+        "numero": 6,
         "nombre": "Listado de archivos embebidos (CSV)",
         "descripcion": "Un registro por archivo embebido con datos del documento contenedor",
         "enabled": True,
     },
     "embebidos": {
-        "numero": 6,
+        "numero": 7,
         "nombre": "Extracción de archivos embebidos",
         "descripcion": "Subcarpetas con archivos embebidos (anidadas si es necesario)",
         "enabled": True,
     },
     "consolidado": {
-        "numero": 7,
-        "nombre": "PDF consolidado sin embebidos (OCR)",
+        "numero": 8,
+        "nombre": "Consolidado sin embebidos (PDF)",
         "descripcion": "Todos los documentos unificados, aplanados y con OCR",
         "enabled": True,
     },
     "consolidado_txt": {
-        "numero": 8,
+        "numero": 9,
         "nombre": "Texto consolidado sin embebidos (TXT)",
         "descripcion": "Todos los documentos unificados en texto plano con encabezados",
+        "enabled": True,
+    },
+    "extraer_documentos": {
+        "numero": 10,
+        "nombre": "Extracción de documentos",
+        "descripcion": "Conserva los PDFs individuales del expediente en la carpeta 'documentos'",
         "enabled": True,
     },
 }

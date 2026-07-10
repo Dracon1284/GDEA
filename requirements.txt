@@ -1,3 +1,4 @@
 PyMuPDF>=1.23.0
 rich>=13.7.0
 ocrmypdf>=15.0.0
+openpyxl>=3.1.0

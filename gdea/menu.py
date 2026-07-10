@@ -106,7 +106,7 @@ class GDEAMenu:
         console.print(Text(BANNER, style="bold cyan"), justify="center")
         console.print(
             Panel(
-                "[bold white]Procesador de Expedientes Electrónicos GDE - V1.2[/bold white]",
+                "[bold white]Procesador de Expedientes Electrónicos GDE - V1.3[/bold white]",
                 style="cyan",
                 padding=(0, 2),
             )
@@ -153,31 +153,54 @@ class GDEAMenu:
             for key, info in REPORTES.items():
                 estado = "[green]+ Activo[/green]" if self.config.get(key) else "[red]- Inactivo[/red]"
                 tabla.add_row(str(info["numero"]), info["nombre"], info["descripcion"], estado)
-                if info["numero"] == 3:
-                    tabla.add_row("", "", "", "")
 
             console.print(tabla)
             console.print()
             console.print("  Ingrese el número del reporte para activar/desactivar.")
+            console.print("  [bold white]\\[A][/bold white] Activar todos     "
+                          "[bold white]\\[B][/bold white] Desactivar todos")
+            console.print("  [bold white]\\[C][/bold white] Desactivar 2,3,4,5,6 y 9     "
+                          "[bold white]\\[D][/bold white] Activar 2,3,4,5,6 y 9")
             console.print("  [bold white]\\[0][/bold white] Volver al menú principal")
             console.print()
 
-            valor = Prompt.ask("  Opción")
+            valor = Prompt.ask("  Opción").strip()
             if valor == "0":
                 break
 
-            # Buscar reporte por número
-            encontrado = False
-            for key, info in REPORTES.items():
-                if str(info["numero"]) == valor:
-                    self.config[key] = not self.config.get(key, True)
-                    estado = "activado" if self.config[key] else "desactivado"
-                    console.print(f"  [cyan]{info['nombre']}[/cyan]: {estado}")
-                    encontrado = True
-                    break
+            comando = valor.upper()
+            # Conjunto de reportes afectados por los comandos C/D (según su número)
+            grupo_cd = {"caratula_y_orden", "indice", "firmantes", "destinatarios",
+                        "listado_embebidos", "consolidado_txt"}
 
-            if not encontrado:
-                console.print("  [yellow]Opción no válida.[/yellow]")
+            if comando == "A":
+                for key in REPORTES:
+                    self.config[key] = True
+                console.print("  [cyan]Todos los reportes activados.[/cyan]")
+            elif comando == "B":
+                for key in REPORTES:
+                    self.config[key] = False
+                console.print("  [cyan]Todos los reportes desactivados.[/cyan]")
+            elif comando == "C":
+                for key in grupo_cd:
+                    self.config[key] = False
+                console.print("  [cyan]Reportes 2, 3, 4, 5, 6 y 9 desactivados.[/cyan]")
+            elif comando == "D":
+                for key in grupo_cd:
+                    self.config[key] = True
+                console.print("  [cyan]Reportes 2, 3, 4, 5, 6 y 9 activados.[/cyan]")
+            else:
+                # Buscar reporte por número
+                encontrado = False
+                for key, info in REPORTES.items():
+                    if str(info["numero"]) == valor:
+                        self.config[key] = not self.config.get(key, True)
+                        estado = "activado" if self.config[key] else "desactivado"
+                        console.print(f"  [cyan]{info['nombre']}[/cyan]: {estado}")
+                        encontrado = True
+                        break
+                if not encontrado:
+                    console.print("  [yellow]Opción no válida.[/yellow]")
 
         guardar_config(self.config)
 
@@ -234,6 +257,21 @@ class GDEAMenu:
     def _flujo_procesamiento(self):
         _cls()
         console.print(Panel("[bold white]Iniciar procesamiento[/bold white]", style="cyan"))
+
+        # No hay reportes activos: no tiene sentido procesar
+        if not any(self.config.values()):
+            console.print()
+            console.print(
+                Panel(
+                    "[yellow]No hay ningún reporte activo.[/yellow]\n"
+                    "Active al menos un reporte en el menú de Opciones antes de procesar.",
+                    title="[bold yellow]Sin reportes[/bold yellow]",
+                    style="yellow",
+                )
+            )
+            console.print()
+            Prompt.ask("  Presione Enter para continuar")
+            return
 
         # Paso 1: Archivo ZIP
         zip_path = self._pedir_zip()
@@ -377,6 +415,7 @@ class GDEAMenu:
     # ─── Motor de procesamiento ───────────────────────────────────────────────
 
     def _procesar(self, zip_path: str, output_dir: str, tipo: str = "EX"):
+        from .reports.excel import generar_excel
         from .reports.caratula_y_orden import generar_caratula_y_orden
         from .reports.indice import generar_indice
         from .reports.firmantes import generar_firmantes
@@ -453,6 +492,16 @@ class GDEAMenu:
         # ── Paso 3: Generar reportes ──────────────────────────────────────────
         resultados = {}
 
+        # (1) Reporte Excel
+        if self.config.get("excel"):
+            with console.status("[cyan]Generando Reporte Excel...[/cyan]"):
+                try:
+                    ruta = generar_excel(caratula_doc, documentos, output_dir)
+                    resultados["excel"] = ruta
+                except Exception as e:
+                    console.print(f"  [red]-[/red]  Reporte Excel: {e}")
+
+        # (2) Carátula y orden
         if self.config.get("caratula_y_orden"):
             with console.status("[cyan]Generando carátula y orden TXT...[/cyan]"):
                 try:
@@ -465,6 +514,7 @@ class GDEAMenu:
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Carátula: {e}")
 
+        # (3) Índice
         if self.config.get("indice"):
             with console.status("[cyan]Generando índice CSV...[/cyan]"):
                 try:
@@ -473,6 +523,25 @@ class GDEAMenu:
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Índice: {e}")
 
+        # (4) Firmantes
+        if self.config.get("firmantes"):
+            with console.status("[cyan]Generando registro de firmantes CSV...[/cyan]"):
+                try:
+                    ruta = generar_firmantes(documentos, output_dir)
+                    resultados["firmantes"] = ruta
+                except Exception as e:
+                    console.print(f"  [red]-[/red]  Firmantes: {e}")
+
+        # (5) Destinatarios
+        if self.config.get("destinatarios"):
+            with console.status("[cyan]Generando destinatarios CSV...[/cyan]"):
+                try:
+                    ruta = generar_destinatarios(documentos, output_dir)
+                    resultados["destinatarios"] = ruta
+                except Exception as e:
+                    console.print(f"  [red]-[/red]  Destinatarios: {e}")
+
+        # (6) Listado de embebidos
         if self.config.get("listado_embebidos"):
             with console.status("[cyan]Generando listado de archivos embebidos CSV...[/cyan]"):
                 try:
@@ -481,6 +550,7 @@ class GDEAMenu:
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Listado embebidos: {e}")
 
+        # (7) Extracción de embebidos
         if self.config.get("embebidos"):
             with console.status("[cyan]Extrayendo archivos embebidos...[/cyan]"):
                 try:
@@ -489,6 +559,7 @@ class GDEAMenu:
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Embebidos: {e}")
 
+        # (8) y (9) Consolidados
         # Seccionar: se pregunta una sola vez para ambos reportes consolidados
         total = len(documentos)
         seccionar = False
@@ -542,21 +613,15 @@ class GDEAMenu:
                 except Exception as e:
                     console.print(f"  [red]-[/red]  Consolidado TXT: {e}")
 
-        if self.config.get("firmantes"):
-            with console.status("[cyan]Generando registro de firmantes CSV...[/cyan]"):
-                try:
-                    ruta = generar_firmantes(documentos, output_dir)
-                    resultados["firmantes"] = ruta
-                except Exception as e:
-                    console.print(f"  [red]-[/red]  Firmantes: {e}")
-
-        if self.config.get("destinatarios"):
-            with console.status("[cyan]Generando destinatarios CSV...[/cyan]"):
-                try:
-                    ruta = generar_destinatarios(documentos, output_dir)
-                    resultados["destinatarios"] = ruta
-                except Exception as e:
-                    console.print(f"  [red]-[/red]  Destinatarios: {e}")
+        # (10) Extracción de documentos: si está desactivado, se elimina la carpeta
+        #      'documentos' (se extrae siempre porque el análisis la necesita).
+        if self.config.get("extraer_documentos"):
+            resultados["extraer_documentos"] = carpeta_docs
+        else:
+            try:
+                shutil.rmtree(carpeta_docs, ignore_errors=True)
+            except Exception as e:
+                console.print(f"  [red]-[/red]  No se pudo eliminar la carpeta documentos: {e}")
 
         # ── Paso 4: Generar log (marcador de procesamiento) ───────────────────
         from .reports.log import generar_log

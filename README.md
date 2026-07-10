@@ -12,7 +12,7 @@ Funciona completamente de forma **local**: no requiere conexión a internet ni a
 - Reconoce tipos de documentos: IF, ME, NO, PV, DI, SC y otros
 - Detecta y extrae firmas digitales (nombre, cargo, área, fecha de firma)
 - Extrae archivos embebidos dentro de los PDFs
-- Genera 8 reportes configurables (activables/desactivables individualmente)
+- Genera 10 reportes configurables (activables/desactivables individualmente)
 - Acepta expedientes `EX-*`, `Documentos-Ex-*` y ZIPs genéricos con solo PDFs
 - Interfaz de terminal con menú interactivo
 
@@ -22,14 +22,16 @@ Funciona completamente de forma **local**: no requiere conexión a internet ni a
 
 | # | Archivo | Descripción |
 |---|---------|-------------|
-| 1 | `caratula.txt` | Texto del PV carátula + totales + timestamp |
-| 2 | `indice.csv` | Un registro por documento con metadatos y último firmante |
-| 3 | `firmantes.csv` | Un registro por firmante digital de cada documento |
-| 4 | `destinatarios.csv` | Destinatarios de documentos ME y NO |
-| 5 | `listado_embebidos.csv` | Listado de archivos embebidos con tamaño |
-| 6 | `embebidos/` | Archivos embebidos extraídos, organizados por número de orden |
-| 7 | `consolidado.pdf` | Todos los documentos fusionados en un único PDF |
-| 8 | `consolidado_txt.txt` | Texto completo del expediente en formato plano |
+| 1 | `reporte.xlsx` | Resumen, índice, firmantes, destinatarios y embebidos en hojas de un Excel |
+| 2 | `caratula_y_orden.txt` | PV carátula + resumen estadístico + verificación de orden cronológico |
+| 3 | `indice.csv` | Un registro por documento con metadatos y último firmante |
+| 4 | `firmantes.csv` | Un registro por firmante digital de cada documento |
+| 5 | `destinatarios.csv` | Destinatarios de documentos ME y NO |
+| 6 | `listado_embebidos.csv` | Listado de archivos embebidos con tamaño |
+| 7 | `embebidos/` | Archivos embebidos extraídos, organizados por número de orden |
+| 8 | `consolidado.pdf` | Todos los documentos fusionados en un único PDF (con OCR) |
+| 9 | `consolidado.txt` | Texto completo del expediente en formato plano |
+| 10 | `documentos/` | PDFs individuales del expediente extraídos del ZIP |
 
 ---
 
@@ -84,14 +86,16 @@ Proyecto5_GDEA/
 │   │   ├── pdf_analyzer.py  # Análisis de PDFs GDE
 │   │   └── zip_handler.py   # Manejo y validación de ZIPs
 │   └── reports/
-│       ├── caratula.py
+│       ├── excel.py
+│       ├── caratula_y_orden.py
 │       ├── indice.py
 │       ├── firmantes.py
 │       ├── destinatarios.py
 │       ├── listado_embebidos.py
 │       ├── embebidos.py
 │       ├── consolidado.py
-│       └── consolidado_txt.py
+│       ├── consolidado_txt.py
+│       └── log.py
 ├── GDEA.spec                # Configuración PyInstaller
 ├── compilar.bat             # Script de compilación
 ├── setup.bat / run.bat      # Scripts de ejecución en desarrollo
