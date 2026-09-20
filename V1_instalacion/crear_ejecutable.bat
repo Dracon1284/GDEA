@@ -18,17 +18,17 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 :: Instalar PyInstaller si no está
-.venv\Scripts\python -c "import PyInstaller" 2>nul
+.venv\Scripts\python.exe -c "import PyInstaller" 2>nul
 if %errorlevel% neq 0 (
     echo Instalando PyInstaller...
-    .venv\Scripts\pip install pyinstaller --quiet
+    .venv\Scripts\python.exe -m pip install pyinstaller --quiet
 )
 
 echo Generando ejecutable...
 echo (Puede tardar 2-5 minutos)
 echo.
 
-.venv\Scripts\pyinstaller ^
+.venv\Scripts\python.exe -m PyInstaller ^
     --name GDEA ^
     --onedir ^
     --console ^

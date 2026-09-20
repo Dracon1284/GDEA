@@ -36,6 +36,7 @@ try:
 except ImportError:
     OCR_OK = False
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 
@@ -52,8 +53,6 @@ def generar_consolidado(
     if not FITZ_OK:
         raise RuntimeError("PyMuPDF no está instalado. No se puede generar el consolidado.")
 
-    output_path = Path(output_dir)
-
     if seccionar and len(documentos) > 100:
         lotes = [documentos[i:i + 100] for i in range(0, len(documentos), 100)]
     else:
@@ -62,8 +61,8 @@ def generar_consolidado(
     archivos_generados = []
 
     for idx, lote in enumerate(lotes):
-        nombre = f"consolidado_parte_{idx+1:02d}.pdf" if len(lotes) > 1 else "consolidado.pdf"
-        ruta_final = output_path / nombre
+        titulo = f"Consolidado_parte_{idx+1:02d}" if len(lotes) > 1 else "Consolidado"
+        ruta_final = ruta_reporte(output_dir, titulo, ".pdf")
         _procesar_lote(lote, ruta_final, callback)
         archivos_generados.append(str(ruta_final))
 

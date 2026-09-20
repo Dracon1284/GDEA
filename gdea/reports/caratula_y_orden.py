@@ -5,9 +5,9 @@
 Reporte 1: Carátula y orden del expediente en formato TXT.
 """
 from datetime import datetime
-from pathlib import Path
 from typing import List, Optional
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _SEP_H = "=" * 70
@@ -20,8 +20,8 @@ def generar_caratula_y_orden(
     todos_documentos: List[Documento],
     output_dir: str,
 ) -> str:
-    """Genera caratula_y_orden.txt en output_dir. Devuelve la ruta del archivo generado."""
-    salida = Path(output_dir) / "caratula_y_orden.txt"
+    """Genera Caratula_y_orden <carpeta>.txt en output_dir. Devuelve la ruta del archivo generado."""
+    salida = ruta_reporte(output_dir, "Caratula_y_orden", ".txt")
 
     total_docs      = len(todos_documentos)
     total_embebidos = sum(d.cantidad_embebidos for d in todos_documentos)

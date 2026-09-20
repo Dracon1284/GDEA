@@ -9,9 +9,9 @@ Un registro por archivo embebido con datos del documento que lo contiene:
   nombre_archivo_embebido, tamaño_bytes
 """
 import csv
-from pathlib import Path
 from typing import List
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _CAMPOS = [
@@ -40,8 +40,8 @@ def _formatear_tamaño(n: int) -> str:
 
 
 def generar_listado_embebidos(documentos: List[Documento], output_dir: str) -> str:
-    """Genera listado_embebidos.csv en output_dir. Devuelve la ruta del archivo."""
-    salida = Path(output_dir) / "listado_embebidos.csv"
+    """Genera Listado_embebidos <carpeta>.csv en output_dir. Devuelve la ruta del archivo."""
+    salida = ruta_reporte(output_dir, "Listado_embebidos", ".csv")
 
     docs_con_embebidos = [d for d in documentos if d.cantidad_embebidos > 0]
 

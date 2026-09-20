@@ -22,6 +22,7 @@ V1_instalacion/distribucion/
 # ── Archivos internos de desarrollo ─────────────────────────────────
 Sumission details.png
 Reporte bugs y mejoras.txt
+grok.exe
 
 # ── Python ──────────────────────────────────────────────────────────
 __pycache__/

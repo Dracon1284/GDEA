@@ -13,10 +13,10 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 :: Instalar PyInstaller si no esta
-.venv\Scripts\python -c "import PyInstaller" 2>nul
+.venv\Scripts\python.exe -c "import PyInstaller" 2>nul
 if %errorlevel% neq 0 (
     echo Instalando PyInstaller...
-    .venv\Scripts\pip install pyinstaller --quiet
+    .venv\Scripts\python.exe -m pip install pyinstaller --quiet
     if %errorlevel% neq 0 (
         echo [ERROR] No se pudo instalar PyInstaller.
         pause
@@ -31,7 +31,9 @@ if exist "build\GDEA" rmdir /s /q "build\GDEA"
 echo Compilando (puede tardar 3-5 minutos)...
 echo.
 
-.venv\Scripts\pyinstaller GDEA.spec --noconfirm
+:: python -m PyInstaller: el launcher pyinstaller.exe falla en silencio
+:: en este entorno (Python 3.14 / scripts del venv).
+.venv\Scripts\python.exe -m PyInstaller GDEA.spec --noconfirm
 
 if %errorlevel% neq 0 (
     echo.

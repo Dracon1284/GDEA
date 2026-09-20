@@ -9,9 +9,9 @@ Un registro por destinatario de documentos tipo ME (Memorando) y NO (Nota):
   tipo_destinatario (A / COPIA A), nombre, area
 """
 import csv
-from pathlib import Path
 from typing import List
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _CAMPOS = [
@@ -25,8 +25,8 @@ _CAMPOS = [
 
 
 def generar_destinatarios(documentos: List[Documento], output_dir: str) -> str:
-    """Genera destinatarios.csv en output_dir. Devuelve la ruta del archivo."""
-    salida = Path(output_dir) / "destinatarios.csv"
+    """Genera Destinatarios <carpeta>.csv en output_dir. Devuelve la ruta del archivo."""
+    salida = ruta_reporte(output_dir, "Destinatarios", ".csv")
 
     docs_me_no = [d for d in documentos if d.tipo in ("ME", "NO")]
 

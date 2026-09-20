@@ -6,7 +6,7 @@ Reporte 3: Extracción de archivos embebidos.
 
 Estructura de salida:
   output_dir/
-    embebidos/
+    Embebidos/
       {numero_orden}/          ← carpeta por documento que tiene embebidos
         archivo1.pdf
         archivo2.xlsx
@@ -25,15 +25,16 @@ try:
 except ImportError:
     FITZ_OK = False
 
+from ..config import CARPETA_EMBEBIDOS
 from ..core.models import Documento, ArchivoEmbebido
 
 
 def extraer_todos_embebidos(documentos: List[Documento], output_dir: str) -> str:
     """
-    Extrae todos los archivos embebidos a output_dir/embebidos/.
+    Extrae todos los archivos embebidos a output_dir/Embebidos/.
     Devuelve la ruta de la carpeta de embebidos.
     """
-    base = Path(output_dir) / "embebidos"
+    base = Path(output_dir) / CARPETA_EMBEBIDOS
 
     docs_con_embebidos = [d for d in documentos if d.cantidad_embebidos > 0]
     if not docs_con_embebidos:

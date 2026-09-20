@@ -9,9 +9,9 @@ Un registro por cada firmante de cada documento:
   nombre_firmante, fecha_firma, cargo_firmante, area_firmante
 """
 import csv
-from pathlib import Path
 from typing import List
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _CAMPOS = [
@@ -26,8 +26,8 @@ _CAMPOS = [
 
 
 def generar_firmantes(documentos: List[Documento], output_dir: str) -> str:
-    """Genera firmantes.csv en output_dir. Devuelve la ruta del archivo."""
-    salida = Path(output_dir) / "firmantes.csv"
+    """Genera Firmantes <carpeta>.csv en output_dir. Devuelve la ruta del archivo."""
+    salida = ruta_reporte(output_dir, "Firmantes", ".csv")
 
     with open(salida, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=_CAMPOS)

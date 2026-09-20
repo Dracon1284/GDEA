@@ -10,6 +10,7 @@ de texto plano con encabezados separadores por documento.
 from pathlib import Path
 from typing import List, Callable, Optional
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _SEP = "=" * 80
@@ -25,9 +26,6 @@ def generar_consolidado_txt(
     Genera el(los) TXT consolidado(s) en output_dir.
     Devuelve lista con las rutas de los archivos generados.
     """
-
-    output_path = Path(output_dir)
-
     if seccionar and len(documentos) > 100:
         lotes = [documentos[i:i + 100] for i in range(0, len(documentos), 100)]
     else:
@@ -36,8 +34,8 @@ def generar_consolidado_txt(
     archivos_generados = []
 
     for idx, lote in enumerate(lotes):
-        nombre = f"consolidado_parte_{idx + 1:02d}.txt" if len(lotes) > 1 else "consolidado.txt"
-        ruta_final = output_path / nombre
+        titulo = f"Consolidado_parte_{idx + 1:02d}" if len(lotes) > 1 else "Consolidado"
+        ruta_final = ruta_reporte(output_dir, titulo, ".txt")
         _procesar_lote(lote, ruta_final, callback)
         archivos_generados.append(str(ruta_final))
 

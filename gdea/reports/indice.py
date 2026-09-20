@@ -12,9 +12,9 @@ Campos por registro:
   (UF = Último Firmante)
 """
 import csv
-from pathlib import Path
 from typing import List
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _CAMPOS = [
@@ -32,8 +32,8 @@ _CAMPOS = [
 
 
 def generar_indice(documentos: List[Documento], output_dir: str) -> str:
-    """Genera indice.csv en output_dir. Devuelve la ruta del archivo."""
-    salida = Path(output_dir) / "indice.csv"
+    """Genera Indice <carpeta>.csv en output_dir. Devuelve la ruta del archivo."""
+    salida = ruta_reporte(output_dir, "Indice", ".csv")
 
     with open(salida, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=_CAMPOS)

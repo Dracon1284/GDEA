@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Damian Patricio Soto
 """
-Log de generación: archivo log.txt que actúa como marcador de procesamiento.
+Log de generación: archivo Log <carpeta>.txt que actúa como marcador de procesamiento.
 Reemplaza al antiguo .gdea_procesado con información más completa y legible.
 """
 from datetime import datetime
 from pathlib import Path
 from typing import List
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 
 _SEP = "=" * 70
@@ -21,8 +22,8 @@ def generar_log(
     version: str,
     duracion: float = None,
 ) -> str:
-    """Genera log.txt en output_dir. Devuelve la ruta del archivo generado."""
-    salida = Path(output_dir) / "log.txt"
+    """Genera Log <carpeta>.txt en output_dir. Devuelve la ruta del archivo generado."""
+    salida = ruta_reporte(output_dir, "Log", ".txt")
     ahora = datetime.now()
 
     total_embebidos = sum(d.cantidad_embebidos for d in documentos)

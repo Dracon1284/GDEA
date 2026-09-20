@@ -19,7 +19,11 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeEl
 from rich.prompt import Prompt
 from rich import box
 
-from .config import REPORTES, VERSION, cargar_config, guardar_config, verificar_marker
+from .config import (
+    REPORTES, REPORTES_VISIBLES, OPCIONES, MODOS, VERSION,
+    cargar_config, guardar_config, verificar_marker,
+    resolver_reportes, hay_reportes_activos,
+)
 from .core.zip_handler import (
     validar_zip, extraer_zip, obtener_pdfs,
     clasificar_zip, pdfs_tienen_prefijo_orden, obtener_pdfs_sin_orden,
@@ -72,6 +76,90 @@ def _confirmar(pregunta: str, default: bool = True) -> bool:
             return False
         console.print("  [yellow]Responda 's' o 'n'.[/yellow]")
 
+
+def _dialogo_abrir_zip() -> "str | None":
+    """
+    Abre el diálogo nativo de Windows para elegir un archivo ZIP.
+    Devuelve la ruta seleccionada, o None si se cancela o falla.
+    """
+    if sys.platform != "win32":
+        return None
+
+    import ctypes
+    from ctypes import wintypes
+
+    class OPENFILENAMEW(ctypes.Structure):
+        _fields_ = [
+            ("lStructSize", wintypes.DWORD),
+            ("hwndOwner", wintypes.HWND),
+            ("hInstance", wintypes.HINSTANCE),
+            ("lpstrFilter", wintypes.LPCWSTR),
+            ("lpstrCustomFilter", wintypes.LPWSTR),
+            ("nMaxCustFilter", wintypes.DWORD),
+            ("nFilterIndex", wintypes.DWORD),
+            ("lpstrFile", wintypes.LPWSTR),
+            ("nMaxFile", wintypes.DWORD),
+            ("lpstrFileTitle", wintypes.LPWSTR),
+            ("nMaxFileTitle", wintypes.DWORD),
+            ("lpstrInitialDir", wintypes.LPCWSTR),
+            ("lpstrTitle", wintypes.LPCWSTR),
+            ("Flags", wintypes.DWORD),
+            ("nFileOffset", wintypes.WORD),
+            ("nFileExtension", wintypes.WORD),
+            ("lpstrDefExt", wintypes.LPCWSTR),
+            ("lCustData", wintypes.LPARAM),
+            ("lpfnHook", ctypes.c_void_p),
+            ("lpTemplateName", wintypes.LPCWSTR),
+            ("pvReserved", ctypes.c_void_p),
+            ("dwReserved", wintypes.DWORD),
+            ("FlagsEx", wintypes.DWORD),
+        ]
+
+    OFN_FILEMUSTEXIST = 0x00001000
+    OFN_PATHMUSTEXIST = 0x00000800
+    OFN_HIDEREADONLY = 0x00000004
+    OFN_NOCHANGEDIR = 0x00000008
+    OFN_EXPLORER = 0x00080000
+
+    def _multi_sz(partes):
+        s = "\0".join(partes) + "\0\0"
+        buf = (ctypes.c_wchar * len(s))()
+        for i, ch in enumerate(s):
+            buf[i] = ch
+        return buf
+
+    filtro = _multi_sz([
+        "Archivos ZIP (*.zip)", "*.zip",
+        "Todos los archivos (*.*)", "*.*",
+    ])
+    buffer = ctypes.create_unicode_buffer(32768)
+    ofn = OPENFILENAMEW()
+    ofn.lStructSize = ctypes.sizeof(OPENFILENAMEW)
+    hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+    ofn.hwndOwner = hwnd
+    ofn.lpstrFilter = ctypes.cast(filtro, wintypes.LPCWSTR)
+    ofn.nFilterIndex = 1
+    ofn.lpstrFile = ctypes.cast(buffer, wintypes.LPWSTR)
+    ofn.nMaxFile = len(buffer)
+    ofn.lpstrTitle = "Seleccione el archivo ZIP del expediente"
+    ofn.Flags = (
+        OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY
+        | OFN_NOCHANGEDIR | OFN_EXPLORER
+    )
+    ofn.lpstrDefExt = "zip"
+
+    GetOpenFileNameW = ctypes.windll.comdlg32.GetOpenFileNameW
+    GetOpenFileNameW.argtypes = [ctypes.POINTER(OPENFILENAMEW)]
+    GetOpenFileNameW.restype = wintypes.BOOL
+
+    ok = bool(GetOpenFileNameW(ctypes.byref(ofn)))
+    if hwnd:
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
+    if not ok:
+        return None
+    ruta = buffer.value.strip().strip('"')
+    return ruta or None
+
 BANNER = """
  ██████╗ ██████╗ ███████╗ █████╗
 ██╔════╝ ██╔══██╗██╔════╝██╔══██╗
@@ -92,8 +180,10 @@ class GDEAMenu:
             if opcion == "1":
                 self._flujo_procesamiento()
             elif opcion == "2":
-                self._menu_opciones()
+                self._flujo_procesamiento_rapido()
             elif opcion == "3":
+                self._menu_opciones()
+            elif opcion == "4":
                 self._acerca_de()
             elif opcion == "0":
                 console.print("\n[bold cyan]Hasta luego.[/bold cyan]\n")
@@ -106,7 +196,7 @@ class GDEAMenu:
         console.print(Text(BANNER, style="bold cyan"), justify="center")
         console.print(
             Panel(
-                "[bold white]Procesador de Expedientes Electrónicos GDE - V1.3[/bold white]",
+                "[bold white]Procesador de Expedientes Electrónicos GDE - V.1.4[/bold white]",
                 style="cyan",
                 padding=(0, 2),
             )
@@ -114,94 +204,120 @@ class GDEAMenu:
 
         # Tabla de reportes activos
         tabla = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
-        tabla.add_column("", style="bold green", width=3)
+        tabla.add_column("", style="dim", width=3)
         tabla.add_column("Reporte", style="white")
         tabla.add_column("Estado", style="dim")
 
         for key, info in REPORTES.items():
-            estado = "[green]+ Activo[/green]" if self.config.get(key) else "[red]- Inactivo[/red]"
-            tabla.add_row(str(info["numero"]), info["nombre"], estado)
+            estado = "[green]+ Activo[/green]" if self.config.get(key) else ""
+            tabla.add_row("-", info["nombre"], estado)
 
         console.print(tabla)
         console.print()
 
-        console.print("  [bold white]\\[1][/bold white] Iniciar procesamiento")
-        console.print("  [bold white]\\[2][/bold white] Opciones (activar/desactivar reportes)")
-        console.print("  [bold white]\\[3][/bold white] Acerca de")
-        console.print("  [bold white]\\[0][/bold white] Salir")
+        console.print("  [bold cyan]\\[1][/bold cyan] Iniciar procesamiento")
+        console.print("  [bold cyan]\\[2][/bold cyan] Procesamiento rápido")
+        console.print("  [bold cyan]\\[3][/bold cyan] Opciones (activar/desactivar reportes)")
+        console.print("  [bold cyan]\\[4][/bold cyan] Acerca de")
+        console.print("  [bold cyan]\\[0][/bold cyan] Salir")
         console.print()
 
         while True:
-            valor = Prompt.ask("  Seleccione una opción", choices=["1", "2", "3", "0"])
+            valor = Prompt.ask(
+                "  Seleccione una opción [bold cyan]\\[1/2/3/4/0][/bold cyan]",
+                choices=["1", "2", "3", "4", "0"],
+                show_choices=False,
+            )
             return valor
 
     # ─── Menú de opciones ─────────────────────────────────────────────────────
 
+    def _sincronizar_reportes(self):
+        flags = resolver_reportes(self.config.get("modo", "A"), self.config.get("opciones", {}))
+        self.config.update(flags)
+
     def _menu_opciones(self):
+        mensaje = ""
         while True:
+            self._sincronizar_reportes()
             _cls()
             console.print(
                 Panel("[bold white]Opciones — Reportes a generar[/bold white]", style="cyan")
             )
 
-            tabla = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
-            tabla.add_column("N°", style="bold yellow", width=4)
-            tabla.add_column("Reporte", style="white", min_width=40)
-            tabla.add_column("Descripción", style="dim")
-            tabla.add_column("Estado", width=12)
-
-            for key, info in REPORTES.items():
+            console.print("[bold]Reportes[/bold]")
+            tabla_r = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+            tabla_r.add_column("", width=12)
+            tabla_r.add_column("Reporte", style="white", min_width=38)
+            tabla_r.add_column("Descripción", style="dim", max_width=58, overflow="fold")
+            for key in REPORTES_VISIBLES:
+                info = REPORTES[key]
                 estado = "[green]+ Activo[/green]" if self.config.get(key) else "[red]- Inactivo[/red]"
-                tabla.add_row(str(info["numero"]), info["nombre"], info["descripcion"], estado)
-
-            console.print(tabla)
+                tabla_r.add_row(estado, info["nombre"], info["descripcion"])
+            console.print(tabla_r)
             console.print()
-            console.print("  Ingrese el número del reporte para activar/desactivar.")
-            console.print("  [bold white]\\[A][/bold white] Activar todos     "
-                          "[bold white]\\[B][/bold white] Desactivar todos")
-            console.print("  [bold white]\\[C][/bold white] Desactivar 2,3,4,5,6 y 9     "
-                          "[bold white]\\[D][/bold white] Activar 2,3,4,5,6 y 9")
+
+            console.print("[bold]Opciones[/bold]")
+            tabla_o = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+            tabla_o.add_column("N°", style="bold yellow", width=4)
+            tabla_o.add_column("Opción", style="white", min_width=32)
+            tabla_o.add_column("Descripción", style="dim", max_width=52, overflow="fold")
+            tabla_o.add_column("Estado", width=14)
+            ops = self.config.setdefault("opciones", {k: True for k in OPCIONES})
+            for key, info in OPCIONES.items():
+                activo = bool(ops.get(key, True))
+                estado = "[green]+ Activo[/green]" if activo else "[red]- Inactivo[/red]"
+                tabla_o.add_row(info["numero"], info["nombre"], info["descripcion"], estado)
+            console.print(tabla_o)
+            console.print()
+
+            console.print("[bold]Modo[/bold]")
+            tabla_m = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+            tabla_m.add_column("N°", style="bold yellow", width=4)
+            tabla_m.add_column("Modo", style="white", min_width=22)
+            tabla_m.add_column("Descripción", style="dim", max_width=58, overflow="fold")
+            tabla_m.add_column("Estado", width=18)
+            modo_actual = str(self.config.get("modo", "A")).upper()
+            for letra, info in MODOS.items():
+                sel = letra == modo_actual
+                estado = (
+                    "[green]+ Seleccionado[/green]" if sel else "[red]- No Seleccionado[/red]"
+                )
+                tabla_m.add_row(letra, info["nombre"], info["descripcion"], estado)
+            console.print(tabla_m)
+            console.print()
+
+            console.print("  Ingrese el número de la opción para activar/desactivar.")
             console.print("  [bold white]\\[0][/bold white] Volver al menú principal")
             console.print()
+            if mensaje:
+                console.print(f"  [yellow]{mensaje}[/yellow]")
+                mensaje = ""
 
-            valor = Prompt.ask("  Opción").strip()
+            valor = Prompt.ask("  Activar/Desactivar/Selección Modo").strip()
             if valor == "0":
                 break
 
             comando = valor.upper()
-            # Conjunto de reportes afectados por los comandos C/D (según su número)
-            grupo_cd = {"caratula_y_orden", "indice", "firmantes", "destinatarios",
-                        "listado_embebidos", "consolidado_txt"}
+            if comando in OPCIONES or comando in {info["numero"] for info in OPCIONES.values()}:
+                clave = comando if comando in OPCIONES else None
+                if clave is None:
+                    for k, info in OPCIONES.items():
+                        if info["numero"] == comando:
+                            clave = k
+                            break
+                if clave:
+                    ops[clave] = not bool(ops.get(clave, True))
+                    self.config["opciones"] = ops
+                    continue
 
-            if comando == "A":
-                for key in REPORTES:
-                    self.config[key] = True
-                console.print("  [cyan]Todos los reportes activados.[/cyan]")
-            elif comando == "B":
-                for key in REPORTES:
-                    self.config[key] = False
-                console.print("  [cyan]Todos los reportes desactivados.[/cyan]")
-            elif comando == "C":
-                for key in grupo_cd:
-                    self.config[key] = False
-                console.print("  [cyan]Reportes 2, 3, 4, 5, 6 y 9 desactivados.[/cyan]")
-            elif comando == "D":
-                for key in grupo_cd:
-                    self.config[key] = True
-                console.print("  [cyan]Reportes 2, 3, 4, 5, 6 y 9 activados.[/cyan]")
-            else:
-                # Buscar reporte por número
-                encontrado = False
-                for key, info in REPORTES.items():
-                    if str(info["numero"]) == valor:
-                        self.config[key] = not self.config.get(key, True)
-                        estado = "activado" if self.config[key] else "desactivado"
-                        console.print(f"  [cyan]{info['nombre']}[/cyan]: {estado}")
-                        encontrado = True
-                        break
-                if not encontrado:
-                    console.print("  [yellow]Opción no válida.[/yellow]")
+            if comando in MODOS:
+                self.config["modo"] = comando
+                continue
 
+            mensaje = "Opción no válida. Use 1-4, A-C o 0."
+
+        self._sincronizar_reportes()
         guardar_config(self.config)
 
     # ─── Acerca de ───────────────────────────────────────────────────────────
@@ -254,43 +370,81 @@ class GDEAMenu:
 
     # ─── Flujo de procesamiento ───────────────────────────────────────────────
 
-    def _flujo_procesamiento(self):
+    def _aviso_sin_reportes(self) -> bool:
+        """True si no hay reportes activos (y ya se informó al usuario)."""
+        if hay_reportes_activos(self.config):
+            return False
+        console.print()
+        console.print(
+            Panel(
+                "[yellow]No hay ningún reporte activo.[/yellow]\n"
+                "Active al menos un reporte en el menú de Opciones antes de procesar.",
+                title="[bold yellow]Sin reportes[/bold yellow]",
+                style="yellow",
+            )
+        )
+        console.print()
+        Prompt.ask("  Presione Enter para continuar")
+        return True
+
+    def _flujo_procesamiento(self, aviso: str = ""):
         _cls()
         console.print(Panel("[bold white]Iniciar procesamiento[/bold white]", style="cyan"))
+        if aviso:
+            console.print()
+            console.print(f"  [yellow]{aviso}[/yellow]")
 
-        # No hay reportes activos: no tiene sentido procesar
-        if not any(self.config.values()):
-            console.print()
-            console.print(
-                Panel(
-                    "[yellow]No hay ningún reporte activo.[/yellow]\n"
-                    "Active al menos un reporte en el menú de Opciones antes de procesar.",
-                    title="[bold yellow]Sin reportes[/bold yellow]",
-                    style="yellow",
-                )
-            )
-            console.print()
-            Prompt.ask("  Presione Enter para continuar")
+        if self._aviso_sin_reportes():
             return
 
-        # Paso 1: Archivo ZIP
         zip_path = self._pedir_zip()
         if zip_path is None:
             return
 
-        tipo_zip = clasificar_zip(zip_path)
-
-        # Paso 2: Carpeta base de salida
         base_dir = self._pedir_carpeta_salida(zip_path)
         if base_dir is None:
             return
 
-        # Subcarpeta de salida (nombre según tipo de ZIP)
+        self._confirmar_y_procesar(zip_path, base_dir)
+
+    def _flujo_procesamiento_rapido(self):
+        _cls()
+        console.print(Panel("[bold white]Procesamiento rápido[/bold white]", style="cyan"))
+
+        if self._aviso_sin_reportes():
+            return
+
+        console.print()
+        console.print("  [dim]Seleccione el archivo ZIP en la ventana de Windows...[/dim]")
+        zip_path = _dialogo_abrir_zip()
+
+        if not zip_path:
+            self._flujo_procesamiento(
+                aviso="No se seleccionó un archivo ZIP. Se continúa con Iniciar procesamiento."
+            )
+            return
+
+        valido, error = validar_zip(zip_path)
+        if not valido:
+            self._flujo_procesamiento(
+                aviso=f"{error} Se continúa con Iniciar procesamiento."
+            )
+            return
+
+        base_dir = str(Path(zip_path).resolve().parent)
+        console.print(f"  [green]+[/green] Archivo válido: [cyan]{Path(zip_path).name}[/cyan]")
+        console.print(
+            "  [dim]La carpeta de reportes se creará en la misma ruta del archivo ZIP.[/dim]"
+        )
+        console.print(f"  [green]+[/green] Carpeta base: [cyan]{base_dir}[/cyan]")
+        self._confirmar_y_procesar(zip_path, base_dir, misma_ruta_zip=True)
+
+    def _confirmar_y_procesar(self, zip_path: str, base_dir: str, misma_ruta_zip: bool = False):
+        tipo_zip = clasificar_zip(zip_path)
         carpeta_exp = _nombre_carpeta_expediente(zip_path)
         output_dir = str(Path(base_dir) / carpeta_exp)
         console.print(f"  [green]+[/green] Subcarpeta de salida: [cyan]{carpeta_exp}[/cyan]")
 
-        # Verificar si ya fue procesado
         ya_procesado, info = verificar_marker(output_dir)
         if ya_procesado:
             console.print()
@@ -306,15 +460,13 @@ class GDEAMenu:
 
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-        # Paso 3: Confirmar e iniciar
         console.print()
-        self._mostrar_resumen_previo(zip_path, output_dir)
+        self._mostrar_resumen_previo(zip_path, output_dir, misma_ruta_zip=misma_ruta_zip)
         console.print()
 
         if not _confirmar("  ¿Desea continuar?", default=True):
             return
 
-        # Paso 4: Procesar
         self._procesar(zip_path, output_dir, tipo_zip)
 
     def _pedir_zip(self) -> "str | None":
@@ -396,18 +548,23 @@ class GDEAMenu:
             except Exception as e:
                 console.print(f"  [red]-[/red] No se pudo acceder a la carpeta: {e}")
 
-    def _mostrar_resumen_previo(self, zip_path: str, output_dir: str):
+    def _mostrar_resumen_previo(self, zip_path: str, output_dir: str, misma_ruta_zip: bool = False):
         tabla = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
         tabla.add_column("", style="dim")
         tabla.add_column("", style="white")
         tabla.add_row("ZIP:", Path(zip_path).name)
         tabla.add_row("Salida:", output_dir)
+        if misma_ruta_zip:
+            tabla.add_row(
+                "Nota:",
+                "La carpeta de reportes se crea en la misma ruta del archivo ZIP",
+            )
         tabla.add_row(
             "Reportes:",
             ", ".join(
                 REPORTES[k]["nombre"].split(" (")[0]
-                for k, v in self.config.items()
-                if v
+                for k in REPORTES
+                if self.config.get(k)
             ) or "[red]Ninguno seleccionado[/red]",
         )
         console.print(tabla)
@@ -614,14 +771,14 @@ class GDEAMenu:
                     console.print(f"  [red]-[/red]  Consolidado TXT: {e}")
 
         # (10) Extracción de documentos: si está desactivado, se elimina la carpeta
-        #      'documentos' (se extrae siempre porque el análisis la necesita).
+        #      'Documentos' (se extrae siempre porque el análisis la necesita).
         if self.config.get("extraer_documentos"):
             resultados["extraer_documentos"] = carpeta_docs
         else:
             try:
                 shutil.rmtree(carpeta_docs, ignore_errors=True)
             except Exception as e:
-                console.print(f"  [red]-[/red]  No se pudo eliminar la carpeta documentos: {e}")
+                console.print(f"  [red]-[/red]  No se pudo eliminar la carpeta Documentos: {e}")
 
         # ── Paso 4: Generar log (marcador de procesamiento) ───────────────────
         from .reports.log import generar_log

@@ -32,7 +32,7 @@ class ArchivoEmbebido:
 class Documento:
     numero_orden: str = ""
     tipo: str = ""        # IF, ME, NO, PV, SC, etc.
-    codigo: str = ""      # Ej: IF-2020-00252349-AFIP-ADLARI%SDGOAI
+    codigo: str = ""      # Ej: IF-2020-00123456-XXXX-AREA%AREASUP
     filepath: str = ""
 
     fecha_documento: str = ""

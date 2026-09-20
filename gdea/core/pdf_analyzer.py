@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Módulo de análisis de PDFs del sistema GDE (Gestión Documental Electrónica Argentina).
+Módulo de análisis de PDFs del sistema GDE (Gestión Documental Electrónica).
 
 Convenciones de nomenclatura GDE:
   Filename: "{orden} - {TIPO}-{AÑO}-{NÚMERO}-{ORGANISMO}-{ÁREA}.pdf"
-  Ejemplo:  "0011 - IF-2020-00252349-AFIP-ADLARI%SDGOAI.pdf"
+  Ejemplo:  "0011 - IF-2020-00123456-ORGA-AREA%AREASUP.pdf"
 
 Tipos de documentos:
   IF = Informe (gráfico) — páginas de firma al final
@@ -26,7 +26,7 @@ except ImportError:
 from .models import Documento, Firmante, Destinatario, ArchivoEmbebido
 
 # ─── Juego de caracteres válidos en nombres de firmantes ──────────────────────
-# Incluye apóstrofe para nombres como D'ERRICO.
+# Incluye apóstrofe para nombres como D'AMICO.
 # Se tolera hasta 3 chars fuera de este juego para cubrir artefactos de
 # codificación del PDF (ej: SEBASTI?N en lugar de SEBASTIÁN).
 _CHARS_NOMBRE_FIRMANTE = frozenset(
@@ -67,12 +67,22 @@ _RE_FIRMADO_ES = re.compile(
 
 # ─── Patrones de fecha y referencia ───────────────────────────────────────────
 
-# Formato largo GDE: "(Martes) 16 de Julio de 2019"
-_RE_FECHA_LARGA = re.compile(
-    r"(?:(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\s+)?"
+_DIA_SEMANA = r"(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)"
+_FECHA_LARGA_CUERPO = (
     r"(\d{1,2})\s+de\s+"
     r"(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)"
-    r"\s+de\s+(\d{4})",
+    r"\s+de\s+(\d{4})"
+)
+
+# Formato GDE con día de la semana: "Martes 16 de Julio de 2019"
+_RE_FECHA_LARGA_CON_DIA = re.compile(
+    _DIA_SEMANA + r"\s+" + _FECHA_LARGA_CUERPO,
+    re.IGNORECASE,
+)
+
+# Formato largo sin exigir día de la semana: "16 de Julio de 2019"
+_RE_FECHA_LARGA = re.compile(
+    r"(?:" + _DIA_SEMANA + r"\s+)?" + _FECHA_LARGA_CUERPO,
     re.IGNORECASE,
 )
 
@@ -182,9 +192,12 @@ def analizar_pdf(filepath: str, numero_orden_override: str = None) -> Documento:
             texto_completo += page.get_text() + "\n"
 
         doc.texto_completo = texto_completo
-        doc.fecha_documento = _extraer_fecha(texto_completo)
+        texto_firma_fecha = ""
+        if meta["tipo"] == "IF" or "hoja adicional de firmas" in texto_completo.lower():
+            texto_firma_fecha = _texto_paginas_metadato_gde(pdf)
+        doc.fecha_documento = _extraer_fecha(texto_completo, texto_firma_fecha)
         doc.referencia = _extraer_referencia(texto_completo, meta["codigo"])
-        doc.firmantes = _extraer_firmantes(texto_completo, pdf, meta["tipo"])
+        doc.firmantes = _extraer_firmantes(texto_completo, pdf, meta["tipo"], meta["codigo"])
 
         if meta["tipo"] in ("ME", "NO"):
             doc.destinatarios = _extraer_destinatarios(texto_completo)
@@ -235,36 +248,81 @@ def _extraer_embebidos(pdf) -> List[ArchivoEmbebido]:
     return embebidos
 
 
-def _extraer_fecha(texto: str) -> str:
+def _formatear_fecha_larga(m: re.Match) -> str:
+    """Convierte un match de fecha larga a DD/MM/YYYY."""
+    dia = m.group(1).zfill(2)
+    mes = _MESES_ES.get(m.group(2).lower(), "??")
+    anio = m.group(3)
+    return f"{dia}/{mes}/{anio}"
+
+
+def _extraer_fecha_en(texto: str) -> str:
     """
-    Extrae la fecha del documento y la normaliza a DD/MM/YYYY.
+    Extrae una fecha de un bloque de texto y la normaliza a DD/MM/YYYY.
 
     Prioridad:
-      1. Formato largo GDE: "Martes 16 de Julio de 2019"
-      2. Etiqueta numérica: "Fecha Caratulación: 16/07/2019"
-      3. Numérico suelto al inicio de línea: "04/05/2020"
+      1. Formato largo GDE con día de la semana: "Martes 16 de Julio de 2019"
+      2. Formato largo sin día: "16 de Julio de 2019"
+      3. Etiqueta numérica: "Fecha Caratulación: 16/07/2019"
+      4. Numérico suelto: "04/05/2020"
     """
-    buscar = texto
+    if not texto:
+        return ""
 
-    # 1. Formato largo con nombre de mes en español
-    m = _RE_FECHA_LARGA.search(buscar)
+    m = _RE_FECHA_LARGA_CON_DIA.search(texto)
     if m:
-        dia = m.group(1).zfill(2)
-        mes = _MESES_ES.get(m.group(2).lower(), "??")
-        anio = m.group(3)
-        return f"{dia}/{mes}/{anio}"
+        return _formatear_fecha_larga(m)
 
-    # 2. "Fecha <etiqueta>: DD/MM/YYYY"
-    m = _RE_FECHA_LABEL.search(buscar)
+    m = _RE_FECHA_LARGA.search(texto)
+    if m:
+        return _formatear_fecha_larga(m)
+
+    m = _RE_FECHA_LABEL.search(texto)
     if m:
         return _normalizar_fecha_num(m.group(1))
 
-    # 3. Fecha numérica sola al inicio de línea
-    m = _RE_FECHA_NUM.search(buscar)
+    m = _RE_FECHA_NUM.search(texto)
     if m:
         return _normalizar_fecha_num(m.group(1))
 
     return ""
+
+
+def _extraer_fecha(texto: str, texto_firma: str = "") -> str:
+    """
+    Extrae la fecha del documento y la normaliza a DD/MM/YYYY.
+
+    Si hay páginas de firma / hoja adicional, se buscan primero ahí
+    (metadato GDE, no citas legales del cuerpo). En ambos bloques se
+    prefiere el formato largo con día de la semana.
+    """
+    if texto_firma:
+        fecha = _extraer_fecha_en(texto_firma)
+        if fecha:
+            return fecha
+    return _extraer_fecha_en(texto)
+
+
+def _texto_paginas_metadato_gde(pdf) -> str:
+    """
+    Texto de las páginas finales con metadato GDE (Hoja Adicional de Firmas
+    o firma digital). Recorre de atrás hacia adelante y se detiene al llegar
+    a páginas sin esos marcadores. Si no hay ninguna, devuelve cadena vacía.
+    """
+    paginas = []
+    for i in range(pdf.page_count - 1, -1, -1):
+        txt = pdf[i].get_text()
+        if (
+            "Digitally signed" in txt
+            or "Hoja Adicional de Firmas" in txt
+            or "firmado" in txt.lower()
+        ):
+            paginas.append(txt)
+        elif paginas:
+            break
+    if not paginas:
+        return ""
+    return "\n".join(reversed(paginas))
 
 
 def _normalizar_fecha_num(fecha_str: str) -> str:
@@ -359,7 +417,12 @@ def _unir_lineas_referencia(partes: List[str]) -> str:
     return resultado.strip()
 
 
-def _extraer_firmantes(texto: str, pdf, tipo: str) -> List[Firmante]:
+def _es_documento_apn(codigo: str) -> bool:
+    """True si el código GDE pertenece a un documento de APN (GDE central)."""
+    return "-APN-" in (codigo or "").upper()
+
+
+def _extraer_firmantes(texto: str, pdf, tipo: str, codigo: str = "") -> List[Firmante]:
     """
     Extrae firmantes digitales del PDF.
     Para IF: busca en las últimas páginas (páginas de firma al final).
@@ -370,7 +433,8 @@ def _extraer_firmantes(texto: str, pdf, tipo: str) -> List[Firmante]:
     else:
         texto_firma = texto
 
-    firmantes = _buscar_firmas_digitally_signed(texto_firma)
+    es_apn = _es_documento_apn(codigo)
+    firmantes = _buscar_firmas_digitally_signed(texto_firma, es_apn=es_apn)
 
     # Fallback: buscar patrón en español si no encontró nada
     if not firmantes:
@@ -405,11 +469,11 @@ def _es_sello_sistema(nombre: str) -> bool:
     return "GESTION DOCUMENTAL" in n or n.startswith("GDE ") or n == "GDE"
 
 
-def _buscar_firmas_digitally_signed(texto: str) -> List[Firmante]:
+def _buscar_firmas_digitally_signed(texto: str, es_apn: bool = False) -> List[Firmante]:
     """
     Extrae firmantes del patrón estándar 'Digitally signed by'.
 
-    GDE tiene tres variantes:
+    GDE tiene cuatro variantes:
 
     Variante A — firmante humano directo (IF):
         Digitally signed by APELLIDO Nombres Nombres
@@ -434,6 +498,16 @@ def _buscar_firmas_digitally_signed(texto: str) -> List[Firmante]:
         DN: ...
         Date: 2019.07.16 15:22:25 -03'00'
         [fin del texto o siguiente "Digitally signed by"]
+
+    Variante D — documento APN (código contiene -APN-), sello GDE central sin DN:
+        Digitally signed by GESTION DOCUMENTAL ELECTRONICA - GDE
+        Date: 2025.10.29 16:33:12 -03:00
+        Nombre y Apellido          ← mayúsculas/minúsculas, a veces sin coma
+        Cargo
+        Área
+        Organismo
+        Digitally signed by GESTION DOCUMENTAL ELECTRONICA - GDE   ← sello duplicado
+        Date: ...
     """
     firmantes = []
     bloques = re.split(r"(?=Digitally signed by)", texto, flags=re.IGNORECASE)
@@ -457,7 +531,7 @@ def _buscar_firmas_digitally_signed(texto: str) -> List[Firmante]:
             m_date_pos_nd = re.search(r"Date:[^\n]*\n", bloque, re.IGNORECASE)
             if not m_date_pos_nd:
                 continue
-            humano_nd = _extraer_bloque_humano(bloque[m_date_pos_nd.end():])
+            humano_nd = _extraer_bloque_humano(bloque[m_date_pos_nd.end():], es_apn=es_apn)
             if not humano_nd:
                 continue
             f.nombre = humano_nd["nombre"]
@@ -487,7 +561,7 @@ def _buscar_firmas_digitally_signed(texto: str) -> List[Firmante]:
             humano = None
             if m_date_pos:
                 post_date = bloque[m_date_pos.end():]
-                humano = _extraer_bloque_humano(post_date)
+                humano = _extraer_bloque_humano(post_date, es_apn=es_apn)
 
             if humano and not _es_sello_sistema(humano["nombre"]):
                 # Firmante humano real (AFIP Variante B): usar su identidad
@@ -534,13 +608,19 @@ def _buscar_firmas_digitally_signed(texto: str) -> List[Firmante]:
     return _deduplicar_firmantes(firmantes)
 
 
-def _extraer_bloque_humano(texto_post_date: str) -> "Optional[dict]":
+def _extraer_bloque_humano(texto_post_date: str, es_apn: bool = False) -> "Optional[dict]":
     """
     Detecta si el texto inmediatamente después de 'Date:' corresponde
-    a un firmante humano GDE con formato APELLIDO, NOMBRE (todo mayúsculas).
+    a un firmante humano GDE.
 
-    Patrón esperado:
+    Patrón AFIP/ARCA:
         APELLIDO, NOMBRE     ← todo mayúsculas, con coma o espacios
+        Cargo
+        Área
+        Organismo
+
+    Patrón APN (código con -APN-):
+        Nombre y Apellido    ← mayúsculas/minúsculas, a veces sin coma
         Cargo
         Área
         Organismo
@@ -573,7 +653,7 @@ def _extraer_bloque_humano(texto_post_date: str) -> "Optional[dict]":
     # generar minúsculas puntuales, p. ej. 'i' por 'Í', 'a' por 'Á').
     # Se verifica longitud, que empiece con letra, que tenga separador y
     # que los caracteres fuera del juego esperado no superen 3 (tolerancia
-    # para apóstrofes como D'ERRICO y artefactos de codificación como SEBASTI?N).
+    # para apóstrofes como D'AMICO y artefactos de codificación como SEBASTI?N).
     primera_norm = primera.upper()
     if not (6 <= len(primera_norm) <= 60):
         return None
@@ -584,8 +664,11 @@ def _extraer_bloque_humano(texto_post_date: str) -> "Optional[dict]":
     if not re.search(r'[,\s]', primera):
         return None  # Una sola palabra → no es un nombre completo
     letras = [c for c in primera if c.isalpha()]
-    if letras and sum(1 for c in letras if c.isupper()) / len(letras) < 0.6:
-        return None  # Texto mixto (ej. "Jefe de Sección") → no es un nombre GDE
+    if not es_apn:
+        if letras and sum(1 for c in letras if c.isupper()) / len(letras) < 0.6:
+            return None  # Texto mixto (ej. "Jefe de Sección") → no es un nombre GDE
+    elif _es_sello_sistema(primera):
+        return None
 
     cargo = lineas[1] if len(lineas) > 1 else ""
     if ee_prefix:

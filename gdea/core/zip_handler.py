@@ -5,6 +5,8 @@ import zipfile
 from pathlib import Path
 from typing import Tuple, List
 
+from ..config import CARPETA_DOCUMENTOS
+
 
 def clasificar_zip(zip_path: str) -> str:
     """
@@ -97,8 +99,8 @@ def pdfs_tienen_prefijo_orden(pdfs: List[str]) -> bool:
 
 
 def extraer_zip(zip_path: str, output_dir: str) -> str:
-    """Extrae el ZIP en output_dir/documentos. Devuelve la ruta de extracción."""
-    extract_path = Path(output_dir) / "documentos"
+    """Extrae el ZIP en output_dir/Documentos. Devuelve la ruta de extracción."""
+    extract_path = Path(output_dir) / CARPETA_DOCUMENTOS
     extract_path.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(zip_path, "r") as zf:

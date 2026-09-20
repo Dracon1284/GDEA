@@ -6,13 +6,13 @@ Reporte 1: Reporte Excel (.xlsx).
 
 Consolida en un único libro, en hojas separadas, la información de los reportes
 tabulares del expediente:
-  · Resumen         (datos de carátula y orden)
-  · Índice          (un registro por documento)
-  · Firmantes       (un registro por firmante)
-  · Destinatarios   (ME/NO)
+  · Resumen            (datos de carátula)
+  · Índice             (un registro por documento)
+  · Firmantes          (un registro por firmante)
+  · Destinatarios      (ME/NO)
   · Listado Embebidos
+  · Orden documentos   (verificación de orden cronológico)
 """
-from pathlib import Path
 from typing import List, Optional
 
 try:
@@ -23,6 +23,7 @@ try:
 except ImportError:
     OPENPYXL_OK = False
 
+from ..config import ruta_reporte
 from ..core.models import Documento
 from .listado_embebidos import _formatear_tamaño
 from .caratula_y_orden import (
@@ -56,7 +57,7 @@ def generar_excel(
     documentos: List[Documento],
     output_dir: str,
 ) -> str:
-    """Genera reporte.xlsx en output_dir. Devuelve la ruta del archivo generado."""
+    """Genera 'Reporte <carpeta>.xlsx' en output_dir. Devuelve la ruta del archivo generado."""
     if not OPENPYXL_OK:
         raise RuntimeError("openpyxl no está instalado. No se puede generar el Reporte Excel.")
 
@@ -70,8 +71,9 @@ def generar_excel(
     _hoja_tabla(wb.create_sheet("Firmantes"), _FIRMANTES_HEADERS, _filas_firmantes(documentos))
     _hoja_tabla(wb.create_sheet("Destinatarios"), _DESTINATARIOS_HEADERS, _filas_destinatarios(documentos))
     _hoja_tabla(wb.create_sheet("Listado Embebidos"), _EMBEBIDOS_HEADERS, _filas_embebidos(documentos))
+    _hoja_orden_documentos(wb.create_sheet("Orden documentos"), documentos)
 
-    salida = Path(output_dir) / "reporte.xlsx"
+    salida = ruta_reporte(output_dir, "Reporte", ".xlsx")
     wb.save(salida)
     return str(salida)
 
@@ -166,8 +168,6 @@ def _ajustar_anchos(ws, headers: List[str], filas: List[list]):
 
 
 def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Documento]):
-    header_fill, header_font, border = _estilos()
-
     total_docs      = len(documentos)
     total_embebidos = sum(d.cantidad_embebidos for d in documentos)
     total_hojas     = sum(d.cantidad_paginas for d in documentos)
@@ -176,7 +176,6 @@ def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Docume
     fecha_caratula  = doc_caratula.fecha_documento if doc_caratula else ""
     dias_caratula   = _calcular_dias_caratula(fecha_caratula, firma_rec)
     dias_firmas     = _calcular_dias_firmas(firma_ant, firma_rec)
-    orden           = _verificar_orden(documentos)
 
     def _firma_str(f):
         return f"{f['fecha']}  (doc. {f['orden']})" if f else "(sin firmas detectadas)"
@@ -184,8 +183,11 @@ def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Docume
     titulo = ws.cell(row=1, column=1, value="RESUMEN DEL EXPEDIENTE")
     titulo.font = Font(bold=True, size=14, color="1F4E78")
 
+    referencia = doc_caratula.referencia if doc_caratula else ""
+    c_ref = ws.cell(row=3, column=1, value=referencia)
+    c_ref.font = Font(bold=True)
+
     filas = [
-        ("N° documento",      doc_caratula.codigo if doc_caratula else ""),
         ("Número de orden",   doc_caratula.numero_orden if doc_caratula else ""),
         ("", ""),
         ("Total de documentos",             total_docs),
@@ -195,10 +197,9 @@ def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Docume
         ("Firma más reciente",              _firma_str(firma_rec)),
         ("Días entre firma más antigua y más reciente", dias_firmas),
         ("Días entre carátula y firma más reciente",    dias_caratula),
-        ("Documentos en orden cronológico", "Sí" if orden["ordenado"] else "No"),
     ]
 
-    fila_inicio = 3
+    fila_inicio = 4
     for i, (etiqueta, valor) in enumerate(filas):
         r = fila_inicio + i
         c_et = ws.cell(row=r, column=1, value=etiqueta)
@@ -209,10 +210,21 @@ def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Docume
     ws.column_dimensions["A"].width = 45
     ws.column_dimensions["B"].width = 45
 
-    # Si no están en orden cronológico, agregar el orden sugerido por fecha de firma
+
+def _hoja_orden_documentos(ws, documentos: List[Documento]):
+    """Hoja final: verificación de orden cronológico y, si aplica, orden sugerido."""
+    header_fill, header_font, border = _estilos()
+    orden = _verificar_orden(documentos)
+
+    c_et = ws.cell(row=1, column=1, value="Documentos en orden cronológico")
+    c_et.font = Font(bold=True)
+    ws.cell(row=1, column=2, value="Sí" if orden["ordenado"] else "No")
+
     if not orden["ordenado"] and orden["orden_sugerido"]:
-        r = fila_inicio + len(filas) + 2
-        ws.cell(row=r, column=1, value="ORDEN POR FECHA DE ÚLTIMO FIRMANTE").font = Font(bold=True, color="1F4E78")
+        r = 3
+        ws.cell(row=r, column=1, value="ORDEN POR FECHA DE ÚLTIMO FIRMANTE").font = Font(
+            bold=True, color="1F4E78"
+        )
         r += 1
         for col, h in enumerate(["N° Orden", "Fecha firma último firmante"], 1):
             celda = ws.cell(row=r, column=col, value=h)
@@ -224,3 +236,6 @@ def _hoja_resumen(ws, doc_caratula: Optional[Documento], documentos: List[Docume
             r += 1
             ws.cell(row=r, column=1, value=item["orden"])
             ws.cell(row=r, column=2, value=item["fecha_firma"])
+
+    ws.column_dimensions["A"].width = 45
+    ws.column_dimensions["B"].width = 45
